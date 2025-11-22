@@ -1,5 +1,6 @@
 import { useState, FormEvent } from 'react'
 import { zkpApi } from '../lib/api'
+import { truncateHash, formatTimestamp } from '../lib/utils'
 
 export function ProofVerification() {
   const [proofId, setProofId] = useState('')
@@ -97,16 +98,16 @@ export function ProofVerification() {
           <h3 className="font-bold mb-2">Proof Information</h3>
           <div className="text-sm space-y-1 font-mono">
             {result.proofId && (
-              <p><strong>Proof ID:</strong> {result.proofId?.slice(0, 20)}...</p>
+              <p><strong>Proof ID:</strong> {truncateHash(result.proofId)}</p>
             )}
             {result.proofHash && (
-              <p><strong>Proof Hash:</strong> {result.proofHash?.slice(0, 20)}...</p>
+              <p><strong>Proof Hash:</strong> {truncateHash(result.proofHash)}</p>
             )}
             {result.verifier && (
               <p><strong>Verifier:</strong> {result.verifier}</p>
             )}
             {result.timestamp && (
-              <p><strong>Timestamp:</strong> {new Date(result.timestamp).toLocaleString()}</p>
+              <p><strong>Timestamp:</strong> {formatTimestamp(result.timestamp)}</p>
             )}
             {typeof result.isVerified !== 'undefined' && (
               <p><strong>Status:</strong> {result.isVerified ? '✓ Verified' : '✗ Not Verified'}</p>

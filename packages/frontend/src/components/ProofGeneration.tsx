@@ -1,5 +1,6 @@
 import { useState, FormEvent } from 'react'
 import { zkpApi } from '../lib/api'
+import { truncateHash } from '../lib/utils'
 
 export function ProofGeneration() {
   const [data, setData] = useState('')
@@ -82,8 +83,8 @@ export function ProofGeneration() {
           <h3 className="font-bold mb-2">Proof Generated Successfully!</h3>
           <div className="text-sm space-y-1 font-mono">
             <p><strong>Proof ID:</strong> {result.proofId}</p>
-            <p><strong>Data Hash:</strong> {result.dataHash?.slice(0, 20)}...</p>
-            <p><strong>Commitment:</strong> {result.commitment?.slice(0, 20)}...</p>
+            <p><strong>Data Hash:</strong> {truncateHash(result.dataHash)}</p>
+            <p><strong>Commitment:</strong> {truncateHash(result.commitment)}</p>
             <p className="text-xs mt-2 text-green-600 dark:text-green-400">
               {result.message}
             </p>

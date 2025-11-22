@@ -1,5 +1,6 @@
 import { useState, FormEvent } from 'react'
 import { zkpApi } from '../lib/api'
+import { truncateHash, formatTimestamp } from '../lib/utils'
 
 export function ProofSubmission() {
   const [proofId, setProofId] = useState('')
@@ -83,9 +84,9 @@ export function ProofSubmission() {
         <div className="mt-6 p-4 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-200 rounded-lg border border-green-200 dark:border-green-800">
           <h3 className="font-bold mb-2">Proof Submitted Successfully!</h3>
           <div className="text-sm space-y-1 font-mono">
-            <p><strong>Proof ID:</strong> {result.proofId?.slice(0, 20)}...</p>
-            <p><strong>Proof Hash:</strong> {result.proofHash?.slice(0, 20)}...</p>
-            <p><strong>Timestamp:</strong> {new Date(result.timestamp).toLocaleString()}</p>
+            <p><strong>Proof ID:</strong> {truncateHash(result.proofId)}</p>
+            <p><strong>Proof Hash:</strong> {truncateHash(result.proofHash)}</p>
+            <p><strong>Timestamp:</strong> {formatTimestamp(result.timestamp)}</p>
             <p className="text-xs mt-2 text-green-600 dark:text-green-400">
               {result.message}
             </p>
