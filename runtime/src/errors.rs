@@ -25,6 +25,9 @@ pub enum ZkpError {
     
     #[error("JSON serialization error: {0}")]
     JsonError(#[from] serde_json::Error),
+
+    #[error("Git clone failed: {0}")]
+    GitCloneError(String),
 }
 
 pub type ZkpResult<T> = Result<T, ZkpError>;

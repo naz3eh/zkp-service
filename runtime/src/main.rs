@@ -5,9 +5,10 @@ use rand::RngCore;
 use secp256k1::{Secp256k1, SecretKey as SecpSecretKey};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::process::Output;
 use std::sync::{Arc, Mutex};
 use tokio::process::Command;
-
+use uuid::Uuid;
 pub struct ZkpService {
     secp: Arc<Secp256k1<secp256k1::All>>,
     secret_key: Arc<SecpSecretKey>,
@@ -218,7 +219,24 @@ impl ZkpService {
             .map_err(|e| ZkpError::DecryptionError(format!("Failed to decode hex: {}", e)))?;
         Ok(hex::encode(&decoded))
     }
+
+    //For cloning the repo
+    pub async fn git_clone(gitrepo: &str) -> ZkpResult<Output>{
+        let base_dir = Uuid::new_v4();
+        std::fs::create_dir(format!("/zkservice/dir/{}", base_dir))?;
+        let write_dir = Command::new("git")
+            .arg("clone")
+            .arg(gitrepo)
+            .arg(format!("/zkservice/dir/{}", base_dir))
+            .output()
+            .await?;
+        if !write_dir.status.success() {
+            return Err(ZkpError::GitCloneError(format!("Failed to clone repository: {}", String::from_utf8_lossy(&write_dir.stderr))));
+        }
+        Ok(write_dir)
+    }
 }
+
 
 #[tokio::main]
 async fn main() -> ZkpResult<()> {

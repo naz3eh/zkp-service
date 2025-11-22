@@ -14,3 +14,4 @@ hex = "0.4"
 uuid = { version = "1.18", features = ["v4"] }
 rand = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
+reqwest = "0.12.24"
