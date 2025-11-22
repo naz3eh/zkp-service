@@ -1,6 +1,7 @@
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+#[allow(dead_code)]
 pub enum ZkpError {
     #[error("Noir command execution failed: {0}")]
     NoirCommandError(String),
@@ -28,6 +29,12 @@ pub enum ZkpError {
 
     #[error("Git clone failed: {0}")]
     GitCloneError(String),
+    
+    #[error("Filecoin upload failed: {0}")]
+    FilecoinUploadError(String),
+    
+    #[error("HTTP request failed: {0}")]
+    HttpError(String),
 }
 
 pub type ZkpResult<T> = Result<T, ZkpError>;

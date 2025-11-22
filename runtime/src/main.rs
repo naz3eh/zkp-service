@@ -5,55 +5,10 @@ use rand::RngCore;
 use secp256k1::{Secp256k1, SecretKey as SecpSecretKey};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::process::Output;
 use std::sync::{Arc, Mutex};
 use tokio::process::Command;
 use tokio::sync::mpsc;
 use uuid::Uuid;
-
-pub struct ZkpService {
-    secp: Arc<Secp256k1<secp256k1::All>>,
-    secret_key: Arc<SecpSecretKey>,
-    state: Arc<Mutex<HashMap<String, String>>>,
-    active_proofs: Arc<Mutex<HashMap<String, ProofTask>>>,
-    task_sender: mpsc::UnboundedSender<QueuedProofTask>,
-    mock_mode: bool,
-}
-
-struct ProofTask {
-    status: ProofStatus,
-}
-
-struct QueuedProofTask {
-    task_id: String,
-    circuit_path: String,
-    input: serde_json::Value,
-    mock_mode: bool,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum ProofStatus {
-    Pending,
-    InProgress,
-    Completed { proof: String },
-    Failed { error: String },
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct ProofRequest {
-    circuit_path: String,
-    input: serde_json::Value,
-    #[serde(default)]
-    mock: bool,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct ProofResponse {
-    task_id: String,
-    status: String,
-    proof: Option<String>,
-    error: Option<String>,
-}
 
 impl ZkpService {
     pub fn new(mock_mode: bool) -> ZkpResult<Self> {
@@ -132,6 +87,7 @@ impl ZkpService {
             active_proofs,
             task_sender,
             mock_mode,
+            tracked_directories: Arc::new(Mutex::new(HashMap::new())),
         })
     }
 
@@ -256,6 +212,7 @@ impl ZkpService {
         Ok(format!("Consult result for: {}", query))
     }
 
+    //Here will have the logic to submit the data to the blockchain and verify the data
     pub fn submit_x(&self, data: &str) -> ZkpResult<String> {
         let submission_id = format!("sub_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
         self.write_state(submission_id.clone(), data.to_string())?;
@@ -268,20 +225,118 @@ impl ZkpService {
         Ok(hex::encode(&decoded))
     }
 
-    //For cloning the repo
-    pub async fn git_clone(gitrepo: &str) -> ZkpResult<Output>{
+    pub async fn git_clone(&self, gitrepo: &str) -> ZkpResult<String> {
         let base_dir = Uuid::new_v4();
-        std::fs::create_dir(format!("/zkservice/dir/{}", base_dir))?;
+        let uuid_string = base_dir.to_string();
+        let dir_path = format!("/zkservice/dir/{}", base_dir);
+        
+        std::fs::create_dir_all(&dir_path)
+            .map_err(|e| ZkpError::GitCloneError(format!("Failed to create directory: {}", e)))?;
+        
         let write_dir = Command::new("git")
             .arg("clone")
             .arg(gitrepo)
-            .arg(format!("/zkservice/dir/{}", base_dir))
+            .arg(&dir_path)
             .output()
             .await?;
+        
         if !write_dir.status.success() {
-            return Err(ZkpError::GitCloneError(format!("Failed to clone repository: {}", String::from_utf8_lossy(&write_dir.stderr))));
+            return Err(ZkpError::GitCloneError(format!(
+                "Failed to clone repository: {}",
+                String::from_utf8_lossy(&write_dir.stderr)
+            )));
         }
-        Ok(write_dir)
+        
+        {
+            let mut dirs = self.tracked_directories.lock().unwrap();
+            dirs.insert(uuid_string.clone(), dir_path);
+        }
+        
+        Ok(uuid_string)
+    }
+
+    pub async fn delete_directory_by_uuid(&self, uuid: &str) -> ZkpResult<()> {
+        let dir_path = {
+            let dirs = self.tracked_directories.lock().unwrap();
+            dirs.get(uuid)
+                .ok_or_else(|| {
+                    ZkpError::InvalidInput(format!("UUID not found in tracked directories: {}", uuid))
+                })?
+                .clone()
+        };
+
+        let path = std::path::Path::new(&dir_path);
+        
+        if !path.exists() {
+            let mut dirs = self.tracked_directories.lock().unwrap();
+            dirs.remove(uuid);
+            return Err(ZkpError::IoError(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("Directory not found: {}", dir_path),
+            )));
+        }
+
+        if !path.is_dir() {
+            return Err(ZkpError::IoError(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("Path is not a directory: {}", dir_path),
+            )));
+        }
+
+        tokio::fs::remove_dir_all(path)
+            .await
+            .map_err(|e| {
+                ZkpError::IoError(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to delete directory {}: {}", dir_path, e),
+                ))
+            })?;
+
+        {
+            let mut dirs = self.tracked_directories.lock().unwrap();
+            dirs.remove(uuid);
+        }
+
+        Ok(())
+    }
+
+    pub async fn delete_directory(&self, dir_path: &str) -> ZkpResult<()> {
+        let path = std::path::Path::new(dir_path);
+        
+        if !path.exists() {
+            return Err(ZkpError::IoError(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("Directory not found: {}", dir_path),
+            )));
+        }
+
+        if !path.is_dir() {
+            return Err(ZkpError::IoError(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("Path is not a directory: {}", dir_path),
+            )));
+        }
+
+        tokio::fs::remove_dir_all(path)
+            .await
+            .map_err(|e| {
+                ZkpError::IoError(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to delete directory {}: {}", dir_path, e),
+                ))
+            })?;
+
+        {
+            let mut dirs = self.tracked_directories.lock().unwrap();
+            dirs.retain(|_, v| v != dir_path);
+        }
+
+        Ok(())
+    }
+
+    pub fn list_tracked_directories(&self) -> Vec<String> {
+        let dirs = self.tracked_directories.lock().unwrap();
+        dirs.keys().cloned().collect()
     }
 }
 
