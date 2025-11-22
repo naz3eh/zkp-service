@@ -1,58 +1,58 @@
-'use client';
-
-import { useState } from 'react';
-import { zkpApi } from '@/lib/api';
+import { useState, FormEvent } from 'react'
+import { zkpApi } from '../lib/api'
 
 export function ProofVerification() {
-  const [proofId, setProofId] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [proofId, setProofId] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setResult(null);
-
-    try {
-      const response = await zkpApi.verifyProof(proofId);
-      setResult(response);
-    } catch (err) {
-      setError('Failed to verify proof. Please check the proof ID and try again.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGetStatus = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setResult(null);
+  const handleVerify = async (e: FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    setResult(null)
 
     try {
-      const response = await zkpApi.getProofStatus(proofId);
-      setResult(response);
+      const response = await zkpApi.verifyProof(proofId)
+      setResult(response)
     } catch (err) {
-      setError('Failed to get proof status. Proof may not exist.');
-      console.error(err);
+      setError('Failed to verify proof. Please check the proof ID and try again.')
+      console.error(err)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
+
+  const handleGetStatus = async (e: FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    setResult(null)
+
+    try {
+      const response = await zkpApi.getProofStatus(proofId)
+      setResult(response)
+    } catch (err) {
+      setError('Failed to get proof status. Proof may not exist.')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6">Verify Proof</h2>
+      <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
+        Verify Proof
+      </h2>
       <p className="text-gray-600 dark:text-gray-400 mb-6">
         Verify a submitted proof or check its status on the blockchain
       </p>
 
       <form className="space-y-6">
         <div>
-          <label className="block text-sm font-medium mb-2">
+          <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
             Proof ID
           </label>
           <input
@@ -70,7 +70,7 @@ export function ProofVerification() {
             type="button"
             onClick={handleVerify}
             disabled={loading || !proofId}
-            className="flex-1 bg-primary text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex-1 bg-primary text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md hover:shadow-lg"
           >
             {loading ? 'Verifying...' : 'Verify Proof'}
           </button>
@@ -79,7 +79,7 @@ export function ProofVerification() {
             type="button"
             onClick={handleGetStatus}
             disabled={loading || !proofId}
-            className="flex-1 bg-secondary text-white py-3 px-6 rounded-lg font-medium hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex-1 bg-secondary text-white py-3 px-6 rounded-lg font-medium hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md hover:shadow-lg"
           >
             {loading ? 'Loading...' : 'Get Status'}
           </button>
@@ -87,15 +87,15 @@ export function ProofVerification() {
       </form>
 
       {error && (
-        <div className="mt-6 p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-100 rounded-lg">
+        <div className="mt-6 p-4 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-200 rounded-lg border border-red-200 dark:border-red-800">
           {error}
         </div>
       )}
 
       {result && (
-        <div className="mt-6 p-4 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-100 rounded-lg">
+        <div className="mt-6 p-4 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200 rounded-lg border border-blue-200 dark:border-blue-800">
           <h3 className="font-bold mb-2">Proof Information</h3>
-          <div className="text-sm space-y-1">
+          <div className="text-sm space-y-1 font-mono">
             {result.proofId && (
               <p><strong>Proof ID:</strong> {result.proofId?.slice(0, 20)}...</p>
             )}
@@ -115,7 +115,7 @@ export function ProofVerification() {
               <p><strong>Status:</strong> {result.verified ? '✓ Verified' : '✗ Not Verified'}</p>
             )}
             {result.message && (
-              <p className="text-xs mt-2 text-blue-600 dark:text-blue-300">
+              <p className="text-xs mt-2 text-blue-600 dark:text-blue-400">
                 {result.message}
               </p>
             )}
@@ -123,5 +123,5 @@ export function ProofVerification() {
         </div>
       )}
     </div>
-  );
+  )
 }

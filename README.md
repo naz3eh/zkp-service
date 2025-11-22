@@ -8,7 +8,7 @@ This monorepo contains three main packages:
 
 - **`packages/contracts`**: Smart contracts built with Hardhat 3 for on-chain proof verification
 - **`packages/backend`**: Node.js/Express API service for proof management and blockchain interaction
-- **`packages/frontend`**: Next.js web application for user interaction
+- **`packages/frontend`**: Vite + React + TypeScript web application for user interaction
 
 ## 🚀 Technologies
 
@@ -23,8 +23,8 @@ This monorepo contains three main packages:
 - Oasis SDK integration
 
 ### Frontend
-- Next.js 14 with App Router
-- React + TypeScript
+- Vite for blazing fast development
+- React 18 + TypeScript
 - Tailwind CSS
 
 ## 📦 Quick Start
@@ -91,12 +91,12 @@ API endpoints:
 See [packages/backend/README.md](packages/backend/README.md) for detailed documentation.
 
 ### Frontend (`packages/frontend`)
-Web application for interacting with the ZKP service.
+Vite + React web application for interacting with the ZKP service.
 
 ```bash
 cd packages/frontend
 npm install
-cp .env.example .env.local  # Configure environment
+cp .env.example .env        # Configure environment
 npm run dev                 # Start development server
 ```
 
@@ -125,9 +125,9 @@ OASIS_NETWORK=testnet
 ```
 
 ### Frontend
-Create `packages/frontend/.env.local`:
+Create `packages/frontend/.env`:
 ```
-NEXT_PUBLIC_API_URL=http://localhost:3001
+VITE_API_URL=http://localhost:3001
 ```
 
 ## 🧪 Testing
