@@ -28,7 +28,7 @@ This will install dependencies for all packages in the monorepo using npm worksp
 ```
 zkp-service/
 ├── packages/
-│   ├── contracts/      # Smart contracts (Hardhat)
+│   ├── contracts/      # Smart contracts (Hardhat 3)
 │   ├── backend/        # API service (Express + TypeScript)
 │   └── frontend/       # Web UI (Vite + React + TypeScript)
 ├── package.json        # Root workspace configuration

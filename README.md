@@ -6,14 +6,14 @@ Zero-Knowledge Proof as a Service - A comprehensive monorepo containing frontend
 
 This monorepo contains three main packages:
 
-- **`packages/contracts`**: Smart contracts built with Hardhat for on-chain proof verification
+- **`packages/contracts`**: Smart contracts built with Hardhat 3 for on-chain proof verification
 - **`packages/backend`**: Node.js/Express API service for proof management and blockchain interaction
 - **`packages/frontend`**: Vite + React + TypeScript web application for user interaction
 
 ## 🚀 Technologies
 
 ### Smart Contracts
-- **Hardhat**: Modern Ethereum development environment ([Hardhat 3 docs](https://hardhat.org/docs/hardhat3/whats-new))
+- **Hardhat 3**: Modern Ethereum development environment with ES modules ([docs](https://hardhat.org/docs/hardhat3/whats-new))
 - **EVVM**: Deployment protocol ([docs](https://www.evvm.info/docs/intro))
 - **Oasis Sapphire**: Privacy-preserving smart contracts for ZKP computation ([docs](https://docs.oasis.io/))
 
@@ -60,7 +60,7 @@ npm run frontend:dev         # Start frontend dev server
 ## 📚 Package Documentation
 
 ### Smart Contracts (`packages/contracts`)
-Smart contracts for ZKP verification using Hardhat.
+Smart contracts for ZKP verification using Hardhat 3 with ES modules.
 
 ```bash
 cd packages/contracts

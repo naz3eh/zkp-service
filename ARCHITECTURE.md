@@ -9,7 +9,7 @@ The ZKP Service is a monorepo-based application that provides Zero-Knowledge Pro
 ### 1. Smart Contracts (`packages/contracts`)
 
 **Technology Stack:**
-- Hardhat - Modern development environment (v2.22+)
+- Hardhat 3 - Modern development environment with ES modules
 - Solidity 0.8.24 - Smart contract language
 - OpenZeppelin - Secure contract libraries
 

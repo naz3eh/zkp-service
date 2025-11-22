@@ -1,5 +1,7 @@
-const { expect } = require("chai");
-const { ethers } = require("hardhat");
+import { expect } from "chai";
+import hre from "hardhat";
+
+const { ethers } = hre;
 
 describe("ZKPVerifier", function () {
   let zkpVerifier;
