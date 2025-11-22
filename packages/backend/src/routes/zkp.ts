@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { ZKPService } from '../services/zkp-service';
+import { proofLimiter } from '../utils/rate-limiter';
 
 export const zkpRouter = Router();
 const zkpService = new ZKPService();
@@ -7,7 +8,7 @@ const zkpService = new ZKPService();
 /**
  * Submit a proof for verification
  */
-zkpRouter.post('/submit', async (req: Request, res: Response) => {
+zkpRouter.post('/submit', proofLimiter, async (req: Request, res: Response) => {
   try {
     const { proofId, proofData } = req.body;
     
@@ -26,7 +27,7 @@ zkpRouter.post('/submit', async (req: Request, res: Response) => {
 /**
  * Verify a submitted proof
  */
-zkpRouter.post('/verify', async (req: Request, res: Response) => {
+zkpRouter.post('/verify', proofLimiter, async (req: Request, res: Response) => {
   try {
     const { proofId } = req.body;
     
@@ -64,7 +65,7 @@ zkpRouter.get('/proof/:proofId', async (req: Request, res: Response) => {
 /**
  * Generate a ZKP using Oasis
  */
-zkpRouter.post('/generate', async (req: Request, res: Response) => {
+zkpRouter.post('/generate', proofLimiter, async (req: Request, res: Response) => {
   try {
     const { data, secret } = req.body;
     
