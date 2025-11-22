@@ -59,7 +59,7 @@ OASIS_API_KEY=your_oasis_api_key
 Create `packages/frontend/.env.production`:
 
 ```bash
-NEXT_PUBLIC_API_URL=https://your-backend-api-url
+VITE_API_URL=https://your-backend-api-url
 ```
 
 ## Deployment Steps
@@ -157,7 +157,7 @@ docker run -p 3001:3001 --env-file packages/backend/.env zkp-backend
 
 ### Step 6: Deploy Frontend
 
-#### Option A: Vercel (Recommended for Next.js)
+#### Option A: Vercel (Recommended)
 
 ```bash
 cd packages/frontend
@@ -168,18 +168,20 @@ vercel --prod
 Or connect via Vercel Dashboard:
 1. Import repository
 2. Set root directory to `packages/frontend`
-3. Framework preset: Next.js
-4. Configure environment variable: `NEXT_PUBLIC_API_URL`
+3. Framework preset: Vite
+4. Build command: `npm run build`
+5. Output directory: `dist`
+6. Configure environment variable: `VITE_API_URL`
 
 #### Option B: Static Export
 
 ```bash
 cd packages/frontend
 npm run build
-# Deploy the `.next` folder to your static host
+# Deploy the `dist/` folder to your static host
 ```
 
-#### Option C: Docker Deployment
+#### Option C: Docker Deployment with Nginx
 
 Create `packages/frontend/Dockerfile`:
 
@@ -199,19 +201,13 @@ WORKDIR /app/packages/frontend
 
 RUN npm run build
 
-FROM node:18-alpine
+FROM nginx:alpine
 
-WORKDIR /app
+COPY --from=builder /app/packages/frontend/dist /usr/share/nginx/html
 
-COPY --from=builder /app/packages/frontend/.next ./.next
-COPY --from=builder /app/packages/frontend/public ./public
-COPY --from=builder /app/packages/frontend/package.json ./
+EXPOSE 80
 
-RUN npm install --production
-
-EXPOSE 3000
-
-CMD ["npm", "start"]
+CMD ["nginx", "-g", "daemon off;"]
 ```
 
 ## Verification

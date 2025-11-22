@@ -1,10 +1,10 @@
 # Smart Contracts Package
 
-This package contains smart contracts for the ZKP service using Hardhat 3.
+This package contains smart contracts for the ZKP service using Hardhat.
 
 ## Technologies
 
-- **Hardhat 3**: Development environment for Ethereum smart contracts
+- **Hardhat**: Modern Ethereum development environment (v2.22+, ready for Hardhat 3)
 - **EVVM**: Deployment protocol integration
 - **Oasis Sapphire**: Privacy-preserving smart contract platform for ZKP computation
 

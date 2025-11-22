@@ -9,7 +9,7 @@ The ZKP Service is a monorepo-based application that provides Zero-Knowledge Pro
 ### 1. Smart Contracts (`packages/contracts`)
 
 **Technology Stack:**
-- Hardhat 3 - Development environment
+- Hardhat - Modern development environment (v2.22+)
 - Solidity 0.8.24 - Smart contract language
 - OpenZeppelin - Secure contract libraries
 
@@ -56,7 +56,8 @@ src/
 ### 3. Frontend Application (`packages/frontend`)
 
 **Technology Stack:**
-- Next.js 14 - React framework with App Router
+- Vite - Next-generation frontend tooling
+- React 18 - UI library
 - TypeScript - Type safety
 - Tailwind CSS - Styling
 - Axios - HTTP client
@@ -64,10 +65,9 @@ src/
 **Architecture:**
 ```
 src/
-├── app/              # Next.js pages
-│   ├── layout.tsx
-│   ├── page.tsx
-│   └── globals.css
+├── main.tsx          # Application entry
+├── App.tsx           # Root component
+├── index.css         # Global styles
 ├── components/       # React components
 │   ├── ProofGeneration.tsx
 │   ├── ProofSubmission.tsx
@@ -172,9 +172,9 @@ User → Frontend → Backend → Smart Contract Query → Return Status
 - Rate limiting and request queuing
 
 ### Frontend
-- Static generation where possible
+- Optimized Vite production builds
 - Client-side caching
-- Progressive enhancement
+- Code splitting for faster loads
 
 ## Future Enhancements
 

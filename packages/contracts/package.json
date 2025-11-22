@@ -1,7 +1,7 @@
 {
   "name": "@zkp-service/contracts",
   "version": "1.0.0",
-  "description": "Smart contracts for ZKP service using Hardhat 3",
+  "description": "Smart contracts for ZKP service using Hardhat",
   "main": "index.js",
   "scripts": {
     "compile": "hardhat compile",
