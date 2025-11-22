@@ -1,0 +1,31 @@
+{
+  "name": "zkp-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Zero-Knowledge Proof Service Monorepo",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "clean": "npm run clean --workspaces && rm -rf node_modules",
+    "contracts:compile": "npm run compile --workspace=packages/contracts",
+    "contracts:deploy": "npm run deploy --workspace=packages/contracts",
+    "backend:dev": "npm run dev --workspace=packages/backend",
+    "frontend:dev": "npm run dev --workspace=packages/frontend"
+  },
+  "keywords": [
+    "zkp",
+    "zero-knowledge-proof",
+    "blockchain",
+    "hardhat",
+    "oasis"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
