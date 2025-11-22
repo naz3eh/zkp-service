@@ -8,17 +8,27 @@ use std::collections::HashMap;
 use std::process::Output;
 use std::sync::{Arc, Mutex};
 use tokio::process::Command;
+use tokio::sync::mpsc;
 use uuid::Uuid;
+
 pub struct ZkpService {
     secp: Arc<Secp256k1<secp256k1::All>>,
     secret_key: Arc<SecpSecretKey>,
     state: Arc<Mutex<HashMap<String, String>>>,
     active_proofs: Arc<Mutex<HashMap<String, ProofTask>>>,
+    task_sender: mpsc::UnboundedSender<QueuedProofTask>,
     mock_mode: bool,
 }
 
 struct ProofTask {
     status: ProofStatus,
+}
+
+struct QueuedProofTask {
+    task_id: String,
+    circuit_path: String,
+    input: serde_json::Value,
+    mock_mode: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -54,11 +64,73 @@ impl ZkpService {
         let secret_key = SecpSecretKey::from_slice(&key_bytes)
             .map_err(|e| ZkpError::KeyGenerationError(format!("Failed to generate secret key: {}", e)))?;
         
+        let (task_sender, task_receiver) = mpsc::unbounded_channel::<QueuedProofTask>();
+        let active_proofs = Arc::new(Mutex::new(HashMap::<String, ProofTask>::new()));
+        
+        // Start worker pool - share receiver across workers using Arc<tokio::sync::Mutex<>>
+        let num_workers = num_cpus::get();
+        let active_proofs_clone = active_proofs.clone();
+        let mock_mode_clone = mock_mode;
+        let shared_receiver = Arc::new(tokio::sync::Mutex::new(task_receiver));
+        
+        for _ in 0..num_workers {
+            let receiver = shared_receiver.clone();
+            let proofs = active_proofs_clone.clone();
+            let mock = mock_mode_clone;
+            
+            tokio::spawn(async move {
+                loop {
+                    let task = {
+                        let mut recv_guard = receiver.lock().await;
+                        recv_guard.recv().await
+                    };
+                    
+                    let task = match task {
+                        Some(task) => task,
+                        None => break, // Channel closed
+                    };
+                    
+                    // Update status to InProgress
+                    {
+                        let mut proofs = proofs.lock().unwrap();
+                        if let Some(proof_task) = proofs.get_mut(&task.task_id) {
+                            proof_task.status = ProofStatus::InProgress;
+                        }
+                    }
+                    
+                    // Process the proof
+                    let result = if task.mock_mode || mock {
+                        Self::generate_mock_proof(&task.task_id, &task.input).await
+                    } else {
+                        Self::generate_noir_proof(&task.circuit_path, &task.input).await
+                    };
+                    
+                    // Update status based on result
+                    {
+                        let mut proofs = proofs.lock().unwrap();
+                        if let Some(proof_task) = proofs.get_mut(&task.task_id) {
+                            match result {
+                                Ok(proof) => {
+                                    proof_task.status = ProofStatus::Completed { proof };
+                                }
+                                Err(e) => {
+                                    proof_task.status = ProofStatus::Failed {
+                                        error: e.to_string(),
+                                    };
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
         Ok(Self {
             secp: Arc::new(secp),
             secret_key: Arc::new(secret_key),
             state: Arc::new(Mutex::new(HashMap::new())),
-            active_proofs: Arc::new(Mutex::new(HashMap::new())),
+            active_proofs,
+            task_sender,
             mock_mode,
         })
     }
@@ -72,6 +144,7 @@ impl ZkpService {
     pub async fn execute_zkp(&self, request: ProofRequest) -> ZkpResult<ProofResponse> {
         let task_id = format!("proof_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
         
+        // Register task as pending
         {
             let mut proofs = self.active_proofs.lock().unwrap();
             proofs.insert(
@@ -82,42 +155,17 @@ impl ZkpService {
             );
         }
 
-        let active_proofs = self.active_proofs.clone();
-        let mock_mode = self.mock_mode || request.mock;
-        let circuit_path = request.circuit_path.clone();
-        let input = request.input.clone();
-        let task_id_clone = task_id.clone();
+        // Enqueue task for processing
+        let queued_task = QueuedProofTask {
+            task_id: task_id.clone(),
+            circuit_path: request.circuit_path.clone(),
+            input: request.input.clone(),
+            mock_mode: self.mock_mode || request.mock,
+        };
 
-        tokio::spawn(async move {
-            {
-                let mut proofs = active_proofs.lock().unwrap();
-                if let Some(task) = proofs.get_mut(&task_id_clone) {
-                    task.status = ProofStatus::InProgress;
-                }
-            }
-
-            let result = if mock_mode {
-                Self::generate_mock_proof(&task_id_clone, &input).await
-            } else {
-                Self::generate_noir_proof(&circuit_path, &input).await
-            };
-
-            {
-                let mut proofs = active_proofs.lock().unwrap();
-                if let Some(task) = proofs.get_mut(&task_id_clone) {
-                    match result {
-                        Ok(proof) => {
-                            task.status = ProofStatus::Completed { proof };
-                        }
-                        Err(e) => {
-                            task.status = ProofStatus::Failed {
-                                error: e.to_string(),
-                            };
-                        }
-                    }
-                }
-            }
-        });
+        self.task_sender
+            .send(queued_task)
+            .map_err(|e| ZkpError::StateError(format!("Failed to enqueue task: {}", e)))?;
 
         Ok(ProofResponse {
             task_id: task_id.clone(),
