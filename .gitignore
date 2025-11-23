@@ -1,6 +1,29 @@
-### AL ###
-#Template for AL projects for Dynamics 365 Business Central
-#launch.json folder
+# Dependencies
+node_modules/
+yarn.lock
+pnpm-lock.yaml
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Cache
+.cache/
+.turbo/
+.eslintcache
+
+# Logs
+*.log
+logs/
+
+# IDE
 .vscode/
 #Cache folder
 .alcache/
