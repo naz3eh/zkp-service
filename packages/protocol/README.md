@@ -24,6 +24,8 @@ npx hardhat test solidity
 npx hardhat test solidity --coverage
 ```
 
+<img width="731" height="120" alt="Image" src="https://github.com/user-attachments/assets/20012a1f-daeb-4110-8dd2-1487b020877d" />
+
 
 ### Addresses
 
