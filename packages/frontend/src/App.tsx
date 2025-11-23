@@ -1,101 +1,34 @@
-import { useState } from 'react'
-import { ProofGeneration } from './components/ProofGeneration'
-import { ProofSubmission } from './components/ProofSubmission'
-import { ProofVerification } from './components/ProofVerification'
+import X402Form from "@/components/X402Form";
 
-type TabType = 'generate' | 'submit' | 'verify'
-
-function App() {
-  const [activeTab, setActiveTab] = useState<TabType>('generate')
-
+const Index = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="max-w-6xl mx-auto p-8">
-        <header className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            ZKP Service
-          </h1>
-          <p className="text-xl text-gray-700 dark:text-gray-300">
-            Zero-Knowledge Proof as a Service
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-            Powered by Oasis Sapphire, EVVM, and Hardhat
-          </p>
-        </header>
-
-        <div className="mb-6">
-          <div className="flex gap-2 border-b border-gray-300 dark:border-gray-700">
-            <button
-              className={`px-6 py-3 font-medium transition-all rounded-t-lg ${
-                activeTab === 'generate'
-                  ? 'bg-white dark:bg-gray-800 border-b-2 border-primary text-primary shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800'
-              }`}
-              onClick={() => setActiveTab('generate')}
-            >
-              Generate Proof
-            </button>
-            <button
-              className={`px-6 py-3 font-medium transition-all rounded-t-lg ${
-                activeTab === 'submit'
-                  ? 'bg-white dark:bg-gray-800 border-b-2 border-primary text-primary shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800'
-              }`}
-              onClick={() => setActiveTab('submit')}
-            >
-              Submit Proof
-            </button>
-            <button
-              className={`px-6 py-3 font-medium transition-all rounded-t-lg ${
-                activeTab === 'verify'
-                  ? 'bg-white dark:bg-gray-800 border-b-2 border-primary text-primary shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800'
-              }`}
-              onClick={() => setActiveTab('verify')}
-            >
-              Verify Proof
-            </button>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8">
-          {activeTab === 'generate' && <ProofGeneration />}
-          {activeTab === 'submit' && <ProofSubmission />}
-          {activeTab === 'verify' && <ProofVerification />}
-        </div>
-
-        <footer className="mt-12 text-center text-sm text-gray-500">
-          <div className="flex justify-center gap-8 mb-4">
-            <a
-              href="https://hardhat.org/docs/hardhat3/whats-new"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-primary transition-colors"
-            >
-              Hardhat 3 Docs
-            </a>
-            <a
-              href="https://www.evvm.info/docs/intro"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-primary transition-colors"
-            >
-              EVVM Docs
-            </a>
-            <a
-              href="https://docs.oasis.io/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-primary transition-colors"
-            >
-              Oasis Docs
-            </a>
-          </div>
-          <p>© 2024 ZKP Service. All rights reserved.</p>
-        </footer>
+    <div className="min-h-screen bg-gradient-modern-animated py-16 px-4 relative overflow-hidden">
+      {/* Enhanced mesh gradient background */}
+      <div className="absolute inset-0 bg-gradient-mesh-enhanced pointer-events-none" />
+      
+      {/* Subtle grid pattern overlay */}
+      <div className="absolute inset-0 bg-gradient-grid pointer-events-none opacity-50" />
+      
+      {/* Floating gradient orbs with enhanced colors */}
+      <div className="absolute top-20 left-10 w-72 h-72 bg-[radial-gradient(circle,hsl(25_70%_58%_/_0.25),transparent_70%)] rounded-full blur-3xl opacity-50 animate-float pointer-events-none" />
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-[radial-gradient(circle,hsl(20_50%_45%_/_0.2),transparent_70%)] rounded-full blur-3xl opacity-40 animate-float pointer-events-none" style={{ animationDelay: '2s' }} />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[radial-gradient(circle,hsl(25_70%_58%_/_0.15),transparent_70%)] rounded-full blur-3xl opacity-30 animate-float pointer-events-none" style={{ animationDelay: '4s' }} />
+      
+      {/* Additional smaller orbs for depth */}
+      <div className="absolute top-1/3 right-1/4 w-48 h-48 bg-[radial-gradient(circle,hsl(20_50%_45%_/_0.2),transparent_70%)] rounded-full blur-2xl opacity-30 animate-float pointer-events-none" style={{ animationDelay: '1s' }} />
+      <div className="absolute bottom-1/3 left-1/4 w-64 h-64 bg-[radial-gradient(circle,hsl(25_70%_58%_/_0.18),transparent_70%)] rounded-full blur-2xl opacity-25 animate-float pointer-events-none" style={{ animationDelay: '3s' }} />
+      
+      {/* Multiple radial gradient overlays for depth */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(25_70%_58%_/_0.1),transparent_50%),radial-gradient(circle_at_70%_80%,hsl(20_50%_45%_/_0.08),transparent_50%),radial-gradient(circle_at_50%_50%,hsl(25_60%_55%_/_0.05),transparent_60%)] pointer-events-none" />
+      
+      {/* Subtle diagonal gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-[hsl(25_70%_58%_/_0.02)] pointer-events-none" />
+      
+      <div className="relative z-10">
+        <X402Form />
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default App
+export default Index;
