@@ -63,25 +63,54 @@ const X402Form = () => {
         setIsProcessing(true);
 
         try {
-            // Simulate API call - replace with actual x402-fetch implementation
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Import x402-fetch client dynamically
+            const { x402Request } = await import("@/utils/x402-client");
 
-            const mockResults = {
-                transactionId: "0x" + Math.random().toString(16).slice(2, 18),
-                status: "confirmed",
-                timestamp: new Date().toISOString(),
+            // Make payment-enabled API call
+            // When the backend returns 402 Payment Required, x402-fetch will:
+            // 1. Parse payment requirements from response headers
+            // 2. Prompt MetaMask to make the payment
+            // 3. Retry the request with payment proof
+            const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001";
+            const results = await x402Request(`${apiUrl}/api/paid/zkp/generate`, {
+                method: "POST",
+                body: JSON.stringify({
+                    data: formData,
+                    x: formData.x,
+                    y: formData.y,
+                    publicKey: formData.publicKey,
+                    githubRepo: formData.githubRepo,
+                }),
+            });
+
+            // Display results from paid API
+            setResults({
+                transactionId: results.transactionId || "0x" + Math.random().toString(16).slice(2, 18),
+                status: results.status || "confirmed",
+                timestamp: results.timestamp || new Date().toISOString(),
                 data: formData,
-                response: {
+                response: results.response || {
                     message: "Payment processed successfully via x402 protocol",
                     coordinates: `(${formData.x}, ${formData.y})`,
                     repository: formData.githubRepo,
-                }
-            };
+                },
+                paymentHash: results.paymentHash, // Transaction hash from payment
+            });
 
-            setResults(mockResults);
-            toast.success("Transaction confirmed!");
-        } catch (error) {
-            toast.error("Transaction failed. Please try again.");
+            toast.success("Payment confirmed! Transaction processed.");
+        } catch (error: any) {
+            console.error("Payment or transaction failed:", error);
+
+            // Handle specific error cases
+            if (error.message?.includes("User rejected")) {
+                toast.error("Payment was rejected in MetaMask");
+            } else if (error.message?.includes("insufficient funds")) {
+                toast.error("Insufficient funds for payment");
+            } else if (error.message?.includes("MetaMask")) {
+                toast.error("Please install MetaMask to continue");
+            } else {
+                toast.error(`Transaction failed: ${error.message || "Unknown error"}`);
+            }
         } finally {
             setIsProcessing(false);
         }
