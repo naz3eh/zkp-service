@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Wallet, Github, Hash } from "lucide-react";
+import { Loader2, Wallet, Github, Hash, RefreshCw } from "lucide-react";
 import WalletModal from "./WalletModal";
 import ResultsDisplay from "./ResultsDisplay";
+import { fetchOasisPublicKey } from "@/utils/oasis-client";
 
 interface FormData {
     x: string;
@@ -26,6 +27,39 @@ const X402Form = () => {
     const [isWalletOpen, setIsWalletOpen] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [results, setResults] = useState<any>(null);
+    const [isFetchingPublicKey, setIsFetchingPublicKey] = useState(false);
+
+    // Fetch Oasis public key on mount
+    useEffect(() => {
+        const loadPublicKey = async () => {
+            setIsFetchingPublicKey(true);
+            try {
+                const publicKey = await fetchOasisPublicKey();
+                setFormData(prev => ({ ...prev, publicKey }));
+                toast.success("Loaded public key from Oasis service");
+            } catch (error: any) {
+                console.error("Failed to fetch Oasis public key:", error);
+                toast.error("Could not fetch Oasis public key. You can enter it manually.");
+            } finally {
+                setIsFetchingPublicKey(false);
+            }
+        };
+
+        loadPublicKey();
+    }, []);
+
+    const handleRefreshPublicKey = async () => {
+        setIsFetchingPublicKey(true);
+        try {
+            const publicKey = await fetchOasisPublicKey();
+            setFormData(prev => ({ ...prev, publicKey }));
+            toast.success("Refreshed public key from Oasis service");
+        } catch (error: any) {
+            toast.error("Failed to refresh public key");
+        } finally {
+            setIsFetchingPublicKey(false);
+        }
+    };
 
     const handleInputChange = (field: keyof FormData, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -63,17 +97,20 @@ const X402Form = () => {
         setIsProcessing(true);
 
         try {
-            // Import x402-fetch client dynamically
-            const { x402Request } = await import("@/utils/x402-client");
-
-            // Make payment-enabled API call
-            // When the backend returns 402 Payment Required, x402-fetch will:
-            // 1. Parse payment requirements from response headers
-            // 2. Prompt MetaMask to make the payment
-            // 3. Retry the request with payment proof
+            const merchantAddress = "0x0c12522fcda861460bf1bc223eca108144ee5df4";
             const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001";
-            const results = await x402Request(`${apiUrl}/api/paid/zkp/generate`, {
+
+            // 1. Send ETH payment directly via MetaMask
+            console.log("💳 Sending payment...");
+            const { sendDirectPayment } = await import("@/utils/direct-payment");
+            const payment = await sendDirectPayment(merchantAddress, "0.001");
+            console.log("✅ Payment sent:", payment.txHash);
+
+            // 2. Call backend to "submit" data (gets dummy response)
+            console.log("📝 Submitting to backend...");
+            const backendResponse = await fetch(`${apiUrl}/api/zkp/generate`, {
                 method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     data: formData,
                     x: formData.x,
@@ -83,21 +120,25 @@ const X402Form = () => {
                 }),
             });
 
-            // Display results from paid API
-            setResults({
-                transactionId: results.transactionId || "0x" + Math.random().toString(16).slice(2, 18),
-                status: results.status || "confirmed",
-                timestamp: results.timestamp || new Date().toISOString(),
-                data: formData,
-                response: results.response || {
-                    message: "Payment processed successfully via x402 protocol",
-                    coordinates: `(${formData.x}, ${formData.y})`,
-                    repository: formData.githubRepo,
-                },
-                paymentHash: results.paymentHash, // Transaction hash from payment
-            });
+            const backendData = await backendResponse.json();
+            console.log("✅ Backend response:", backendData);
 
-            toast.success("Payment confirmed! Transaction processed.");
+            toast.success("Payment sent! Transaction confirmed on Sepolia.");
+
+            // Display results with structure expected by ResultsDisplay
+            setResults({
+                transactionId: payment.txHash,
+                status: "confirmed",
+                timestamp: backendData.timestamp,
+                data: backendData.data,
+                response: {
+                    message: "Payment confirmed on Sepolia! ZKP generated successfully.",
+                    coordinates: backendData.data.coordinates,
+                    repository: backendData.data.repository,
+                },
+                payment: payment,  // Keep payment data for potential future use
+                proof: backendData.proof,
+            });
         } catch (error: any) {
             console.error("Payment or transaction failed:", error);
 
@@ -173,9 +214,22 @@ const X402Form = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="publicKey" className="flex items-center gap-2">
-                                <Wallet className="w-4 h-4 text-primary" />
-                                Public Key
+                            <Label htmlFor="publicKey" className="flex items-center gap-2 justify-between">
+                                <span className="flex items-center gap-2">
+                                    <Wallet className="w-4 h-4 text-primary" />
+                                    Public Key (from Oasis)
+                                </span>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleRefreshPublicKey}
+                                    disabled={isFetchingPublicKey}
+                                    className="h-6 px-2 text-xs"
+                                >
+                                    <RefreshCw className={`w-3 h-3 mr-1 ${isFetchingPublicKey ? 'animate-spin' : ''}`} />
+                                    {isFetchingPublicKey ? 'Loading...' : 'Refresh'}
+                                </Button>
                             </Label>
                             <Input
                                 id="publicKey"
@@ -184,6 +238,7 @@ const X402Form = () => {
                                 value={formData.publicKey}
                                 onChange={(e) => handleInputChange("publicKey", e.target.value)}
                                 className="bg-secondary/50 border-border focus:border-primary focus:ring-2 focus:ring-primary/30 transition-all hover:border-primary/50 backdrop-blur-sm font-mono text-sm"
+                                disabled={isFetchingPublicKey}
                             />
                         </div>
 

@@ -1,10 +1,13 @@
+import dotenv from 'dotenv';
+
+// IMPORTANT: Load environment variables BEFORE importing other modules
+// This ensures that module-level constants that depend on env vars are initialized correctly
+dotenv.config();
+
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { zkpRouter } from './routes/zkp';
 import { apiLimiter } from './utils/rate-limiter';
-
-dotenv.config();
 
 const app: Express = express();
 const port = process.env.PORT || 3001;

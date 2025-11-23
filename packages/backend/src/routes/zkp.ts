@@ -11,7 +11,7 @@ const zkpService = new ZKPService();
 zkpRouter.post('/submit', proofLimiter, async (req: Request, res: Response) => {
   try {
     const { proofId, proofData } = req.body;
-    
+
     if (!proofId || !proofData) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -30,7 +30,7 @@ zkpRouter.post('/submit', proofLimiter, async (req: Request, res: Response) => {
 zkpRouter.post('/verify', proofLimiter, async (req: Request, res: Response) => {
   try {
     const { proofId } = req.body;
-    
+
     if (!proofId) {
       return res.status(400).json({ error: 'Missing proofId' });
     }
@@ -50,7 +50,7 @@ zkpRouter.get('/proof/:proofId', async (req: Request, res: Response) => {
   try {
     const { proofId } = req.params;
     const proof = await zkpService.getProof(proofId);
-    
+
     if (!proof) {
       return res.status(404).json({ error: 'Proof not found' });
     }
@@ -63,18 +63,33 @@ zkpRouter.get('/proof/:proofId', async (req: Request, res: Response) => {
 });
 
 /**
- * Generate a ZKP using Oasis
+ * Generate a ZKP - DEMO version (no payment required)
+ * Returns dummy data for testing
  */
 zkpRouter.post('/generate', proofLimiter, async (req: Request, res: Response) => {
   try {
-    const { data, secret } = req.body;
-    
-    if (!data) {
-      return res.status(400).json({ error: 'Missing data' });
-    }
+    const { data, x, y, publicKey, githubRepo } = req.body;
 
-    const proof = await zkpService.generateProof(data, secret);
-    res.json(proof);
+    console.log('📝 ZKP generation request received');
+    console.log('Data:', { x, y, publicKey, githubRepo });
+
+    // Return dummy success data
+    res.json({
+      success: true,
+      proof: {
+        proofId: `proof_${Date.now()}`,
+        status: 'verified',
+        generatedAt: new Date().toISOString(),
+        type: 'zkp-oasis',
+      },
+      data: {
+        coordinates: `(${x}, ${y})`,
+        publicKey,
+        repository: githubRepo,
+      },
+      message: 'ZKP generated successfully',
+      timestamp: new Date().toISOString(),
+    });
   } catch (error) {
     console.error('Error generating proof:', error);
     res.status(500).json({ error: 'Failed to generate proof' });
