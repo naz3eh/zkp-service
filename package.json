@@ -13,7 +13,9 @@
     "contracts:compile": "npm run compile --workspace=packages/contracts",
     "contracts:deploy": "npm run deploy --workspace=packages/contracts",
     "backend:dev": "npm run dev --workspace=packages/backend",
-    "frontend:dev": "npm run dev --workspace=packages/frontend"
+    "frontend:dev": "npm run dev --workspace=packages/frontend",
+    "facilitator:dev": "npm run dev --workspace=packages/facilitator",
+    "facilitator:build": "npm run build --workspace=packages/facilitator"
   },
   "keywords": [
     "zkp",
