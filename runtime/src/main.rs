@@ -4,7 +4,7 @@ mod types;
 
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::Json,
     routing::{delete, get, post},
     Router,
@@ -16,9 +16,10 @@ use service::ZkpService;
 use types::{
     ConsultXRequest, ConsultXResponse, DecryptInputRequest, DecryptInputResponse,
     DeleteDirectoryRequest, ErrorResponse, GitCloneRequest, GitCloneResponse,
-    PublicKeyResponse, ProofRequest, ProofResponse, QueryStateResponse,
+    PaidResourceResponse, PaymentProof, PaymentRequiredResponse, PublicKeyResponse, 
+    ProofRequest, ProofResponse, QueryStateResponse,
     SignMessageRequest, SignMessageResponse, SubmitXRequest, SubmitXResponse,
-    TrackedDirectoriesResponse, WriteStateRequest,
+    TrackedDirectoriesResponse, VerifyPaymentResponse, WriteStateRequest,
 };
 
 // Shared application state
@@ -142,6 +143,138 @@ async fn sign_message(
     Ok(Json(SignMessageResponse { signature, public_key }))
 }
 
+async fn paid_resource(
+    headers: HeaderMap,
+) -> Result<Json<PaidResourceResponse>, (StatusCode, Json<PaymentRequiredResponse>)> {
+    // Get configuration from environment variables
+    let facilitator_url = std::env::var("FACILITATOR_URL")
+        .unwrap_or_else(|_| "https://zkp-service-facilitator.vercel.app".to_string());
+    let required_amount = std::env::var("REQUIRED_AMOUNT")
+        .unwrap_or_else(|_| "1000000000000000".to_string()); // 0.001 ETH in wei
+    let merchant_address = std::env::var("MERCHANT_ADDRESS")
+        .unwrap_or_else(|_| "0x0000000000000000000000000000000000000000".to_string());
+
+    // 1. Extract payment proof from request header
+    let payment_proof_header = headers.get("x-payment");
+    
+    if payment_proof_header.is_none() {
+        // Return 402 Payment Required
+        return Err((
+            StatusCode::PAYMENT_REQUIRED,
+            Json(PaymentRequiredResponse {
+                error: "Payment Required".to_string(),
+                amount: required_amount.clone(),
+                recipient: merchant_address.clone(),
+                currency: Some("ETH".to_string()),
+                network: Some("sepolia".to_string()),
+            }),
+        ));
+    }
+
+    // 2. Parse payment proof from header
+    let payment_proof_str = payment_proof_header.unwrap()
+        .to_str()
+        .map_err(|_| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(PaymentRequiredResponse {
+                    error: "Invalid payment header".to_string(),
+                    amount: required_amount.clone(),
+                    recipient: merchant_address.clone(),
+                    currency: Some("ETH".to_string()),
+                    network: Some("sepolia".to_string()),
+                }),
+            )
+        })?;
+
+    let payment_proof: PaymentProof = serde_json::from_str(payment_proof_str)
+        .map_err(|_| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(PaymentRequiredResponse {
+                    error: "Invalid payment proof format".to_string(),
+                    amount: required_amount.clone(),
+                    recipient: merchant_address.clone(),
+                    currency: Some("ETH".to_string()),
+                    network: Some("sepolia".to_string()),
+                }),
+            )
+        })?;
+
+    // 3. Verify payment with facilitator
+    // Note: serde will automatically convert snake_case to camelCase due to rename_all
+    let verify_request = serde_json::json!({
+        "paymentProof": payment_proof,
+        "requiredAmount": required_amount,
+        "requiredRecipient": merchant_address,
+    });
+
+    let client = reqwest::Client::new();
+    let verify_url = format!("{}/api/facilitator/verify", facilitator_url);
+    
+    let response = client
+        .post(&verify_url)
+        .json(&verify_request)
+        .send()
+        .await
+        .map_err(|e| {
+            eprintln!("Payment verification request failed: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(PaymentRequiredResponse {
+                    error: format!("Verification failed: {}", e),
+                    amount: required_amount.clone(),
+                    recipient: merchant_address.clone(),
+                    currency: Some("ETH".to_string()),
+                    network: Some("sepolia".to_string()),
+                }),
+            )
+        })?;
+
+    let verify_result: VerifyPaymentResponse = response
+        .json()
+        .await
+        .map_err(|e| {
+            eprintln!("Failed to parse verification response: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(PaymentRequiredResponse {
+                    error: "Failed to parse verification response".to_string(),
+                    amount: required_amount.clone(),
+                    recipient: merchant_address.clone(),
+                    currency: Some("ETH".to_string()),
+                    network: Some("sepolia".to_string()),
+                }),
+            )
+        })?;
+
+    if !verify_result.valid {
+        return Err((
+            StatusCode::PAYMENT_REQUIRED,
+            Json(PaymentRequiredResponse {
+                error: format!("Invalid payment: {}", verify_result.error.unwrap_or_else(|| "Unknown error".to_string())),
+                amount: required_amount.clone(),
+                recipient: merchant_address.clone(),
+                currency: Some("ETH".to_string()),
+                network: Some("sepolia".to_string()),
+            }),
+        ));
+    }
+
+    // 4. Payment verified! Process the request
+    println!("Payment verified: {:?}", verify_result.payment_id);
+    if let Some(tx_hash) = &verify_result.settlement_tx_hash {
+        println!("Settlement TX: {}", tx_hash);
+    }
+
+    // Your business logic here
+    Ok(Json(PaidResourceResponse {
+        success: true,
+        data: "Your protected resource".to_string(),
+        payment_id: verify_result.payment_id,
+    }))
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mock_mode = std::env::var("MOCK_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
@@ -168,6 +301,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/directory/:uuid", delete(delete_directory_by_uuid))
         .route("/directory", delete(delete_directory))
         .route("/tracked-directories", get(list_tracked_directories))
+        .route("/api/paid/resource", post(paid_resource))
         .layer(CorsLayer::permissive())
         .with_state(app_state);
     
@@ -187,6 +321,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   DELETE /directory/:uuid");
     println!("   DELETE /directory");
     println!("   GET  /tracked-directories");
+    println!("   POST /api/paid/resource");
     
     axum::serve(listener, app).await?;
     

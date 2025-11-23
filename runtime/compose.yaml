@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  zkp-runtime:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - MOCK_MODE=${MOCK_MODE:-false}
+    restart: unless-stopped

@@ -136,3 +136,50 @@ pub struct SignMessageResponse {
 pub struct ErrorResponse {
     pub error: String,
 }
+
+// Payment verification types
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PaymentProof {
+    pub signature: String,
+    pub amount: String,
+    pub recipient: String,
+    pub payer: String,
+    pub nonce: String,
+    pub timestamp: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VerifyPaymentRequest {
+    pub payment_proof: PaymentProof,
+    pub required_amount: String,
+    pub required_recipient: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VerifyPaymentResponse {
+    pub valid: bool,
+    #[serde(rename = "paymentId")]
+    pub payment_id: Option<String>,
+    #[serde(rename = "settlementTxHash")]
+    pub settlement_tx_hash: Option<String>,
+    pub settled: Option<bool>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PaymentRequiredResponse {
+    pub error: String,
+    pub amount: String,
+    pub recipient: String,
+    pub currency: Option<String>,
+    pub network: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PaidResourceResponse {
+    pub success: bool,
+    pub data: String,
+    pub payment_id: Option<String>,
+}
