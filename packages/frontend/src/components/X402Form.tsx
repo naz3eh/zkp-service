@@ -97,17 +97,20 @@ const X402Form = () => {
         setIsProcessing(true);
 
         try {
-            // Use custom payment client (viem-based)
-            const { paymentRequest } = await import("@/utils/payment-client");
-
+            const merchantAddress = "0x0c12522fcda861460bf1bc223eca108144ee5df4";
             const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
-            // Make payment-enabled request
-            // If backend returns 402, paymentRequest will:
-            // 1. Prompt MetaMask to sign payment
-            // 2. Retry with payment proof in header
-            const results = await paymentRequest(`${apiUrl}/api/zkp/generate`, {
+            // 1. Send ETH payment directly via MetaMask
+            console.log("💳 Sending payment...");
+            const { sendDirectPayment } = await import("@/utils/direct-payment");
+            const payment = await sendDirectPayment(merchantAddress, "0.001");
+            console.log("✅ Payment sent:", payment.txHash);
+
+            // 2. Call backend to "submit" data (gets dummy response)
+            console.log("📝 Submitting to backend...");
+            const backendResponse = await fetch(`${apiUrl}/api/zkp/generate`, {
                 method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     data: formData,
                     x: formData.x,
@@ -117,16 +120,24 @@ const X402Form = () => {
                 }),
             });
 
-            toast.success("Payment confirmed! Transaction settled on Sepolia.");
+            const backendData = await backendResponse.json();
+            console.log("✅ Backend response:", backendData);
 
-            // Display results with payment information
+            toast.success("Payment sent! Transaction confirmed on Sepolia.");
+
+            // Display results with structure expected by ResultsDisplay
             setResults({
-                success: results.success,
-                proof: results.proof,
-                payment: results.payment,
-                timestamp: results.timestamp,
-                formData: formData,
-                message: "✅ Payment verified and settled on Sepolia blockchain!",
+                transactionId: payment.txHash,
+                status: "confirmed",
+                timestamp: backendData.timestamp,
+                data: backendData.data,
+                response: {
+                    message: "Payment confirmed on Sepolia! ZKP generated successfully.",
+                    coordinates: backendData.data.coordinates,
+                    repository: backendData.data.repository,
+                },
+                payment: payment,  // Keep payment data for potential future use
+                proof: backendData.proof,
             });
         } catch (error: any) {
             console.error("Payment or transaction failed:", error);

@@ -19,11 +19,16 @@ const ResultsDisplay = ({ results }: ResultsDisplayProps) => {
         toast.success("Copied to clipboard!");
     };
 
+    const truncateHash = (hash: string, startChars = 10, endChars = 8) => {
+        if (hash.length <= startChars + endChars) return hash;
+        return `${hash.slice(0, startChars)}...${hash.slice(-endChars)}`;
+    };
+
     return (
         <Card className="p-6 bg-gradient-card border border-border/50 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500 relative overflow-hidden group">
             {/* Gradient glow effect */}
             <div className="absolute inset-0 bg-gradient-primary opacity-0 group-hover:opacity-5 transition-opacity duration-500 blur-2xl -z-10" />
-            
+
             <div className="space-y-6 relative z-10">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-gradient-primary rounded-full shadow-lg shadow-primary/30">
@@ -41,20 +46,31 @@ const ResultsDisplay = ({ results }: ResultsDisplayProps) => {
 
                 <div className="space-y-3">
                     <div className="p-4 bg-secondary/50 rounded-lg border border-border/50 backdrop-blur-sm hover:border-primary/30 transition-all">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-muted-foreground">Transaction ID</span>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => copyToClipboard(results.transactionId)}
-                                className="h-8 px-2 hover:bg-primary/10 hover:text-primary transition-colors"
-                            >
-                                <Copy className="w-3 h-3" />
-                            </Button>
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Transaction ID:</span>
+
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <a
+                                    href={`https://sepolia.etherscan.io/tx/${results.transactionId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-mono text-sm text-primary hover:underline inline-flex items-center gap-1"
+                                    title={results.transactionId}
+                                >
+                                    <span>{truncateHash(results.transactionId)}</span>
+                                    <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                </a>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => copyToClipboard(results.transactionId)}
+                                    className="h-8 px-2 hover:bg-primary/10 hover:text-primary transition-colors flex-shrink-0"
+                                >
+                                    <Copy className="w-3 h-3" />
+                                </Button></div>
                         </div>
-                        <p className="font-mono text-sm break-all text-foreground">
-                            {results.transactionId}
-                        </p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">

@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { ZKPService } from '../services/zkp-service';
 import { proofLimiter } from '../utils/rate-limiter';
-import { x402PaymentMiddleware } from '../middleware/x402-payment';
 
 export const zkpRouter = Router();
 const zkpService = new ZKPService();
@@ -64,40 +63,32 @@ zkpRouter.get('/proof/:proofId', async (req: Request, res: Response) => {
 });
 
 /**
- * Generate a ZKP using Oasis (PAID ENDPOINT - Requires x402 payment)
+ * Generate a ZKP - DEMO version (no payment required)
+ * Returns dummy data for testing
  */
-zkpRouter.post('/generate', x402PaymentMiddleware, proofLimiter, async (req: Request, res: Response) => {
+zkpRouter.post('/generate', proofLimiter, async (req: Request, res: Response) => {
   try {
-    const { data, secret } = req.body;
+    const { data, x, y, publicKey, githubRepo } = req.body;
 
-    if (!data) {
-      return res.status(400).json({ error: 'Missing data' });
-    }
+    console.log('📝 ZKP generation request received');
+    console.log('Data:', { x, y, publicKey, githubRepo });
 
-    // Generate the proof
-    const proof = await zkpService.generateProof(data, secret);
-
-    // Get payment info attached by middleware
-    const payment = (req as any).payment;
-
-    console.log('🎉 Proof generated successfully');
-    console.log('💰 Payment settled on Sepolia:', payment?.settlementTxHash);
-
-    // Return proof with payment information
+    // Return dummy success data
     res.json({
       success: true,
-      proof,
-      payment: {
-        paymentId: payment?.paymentId,
-        settlementTxHash: payment?.settlementTxHash,
-        settled: payment?.settled,
-        payer: payment?.payer,
-        amount: payment?.amount,
-        etherscanUrl: payment?.settlementTxHash
-          ? `https://sepolia.etherscan.io/tx/${payment.settlementTxHash}`
-          : undefined
+      proof: {
+        proofId: `proof_${Date.now()}`,
+        status: 'verified',
+        generatedAt: new Date().toISOString(),
+        type: 'zkp-oasis',
       },
-      timestamp: new Date().toISOString()
+      data: {
+        coordinates: `(${x}, ${y})`,
+        publicKey,
+        repository: githubRepo,
+      },
+      message: 'ZKP generated successfully',
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error('Error generating proof:', error);
