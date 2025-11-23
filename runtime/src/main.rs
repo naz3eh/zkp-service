@@ -29,6 +29,21 @@ struct AppState {
 }
 
 // API Handlers
+async fn health_check(State(state): State<AppState>) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    // Verify service is actually functional by checking if we can get the public key
+    match state.service.get_public_key() {
+        Ok(_) => Ok(Json(serde_json::json!({
+            "status": "healthy",
+            "service": "zkp-service",
+            "timestamp": chrono::Utc::now().to_rfc3339()
+        }))),
+        Err(e) => Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(ErrorResponse { error: format!("Service unhealthy: {}", e) })
+        ))
+    }
+}
+
 async fn get_public_key(State(state): State<AppState>) -> Result<Json<PublicKeyResponse>, (StatusCode, Json<ErrorResponse>)> {
     let public_key = state.service.get_public_key()
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: e.to_string() })))?;
@@ -288,6 +303,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app_state = AppState { service };
     
     let app = Router::new()
+        .route("/health", get(health_check))
         .route("/public-key", get(get_public_key))
         .route("/sign-message", post(sign_message))
         .route("/execute-zkp", post(execute_zkp))
@@ -308,6 +324,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
     println!("Server listening on http://0.0.0.0:3000");
     println!("API Endpoints:");
+    println!("   GET  /health");
     println!("   GET  /public-key");
     println!("   POST /sign-message");
     println!("   POST /execute-zkp");

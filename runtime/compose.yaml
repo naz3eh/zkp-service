@@ -1,10 +1,14 @@
-version: '3.8'
-
 services:
   zkp-runtime:
-    build: .
+    image: docker.io/eldiosito/argentina:v1
+    platform: linux/amd64
     ports:
       - "3000:3000"
+    annotations:
+      net.oasis.proxy.ports.3000.mode: terminate-tls
     environment:
       - MOCK_MODE=${MOCK_MODE:-false}
+      - FACILITATOR_URL=${FACILITATOR_URL:-https://zkp-service-facilitator.vercel.app}
+      - REQUIRED_AMOUNT=${REQUIRED_AMOUNT:-1000000000000000}
+      - MERCHANT_ADDRESS=${MERCHANT_ADDRESS:-0x0000000000000000000000000000000000000000}
     restart: unless-stopped
