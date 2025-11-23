@@ -75,13 +75,17 @@ export class PaymentVerificationService {
 
     /**
      * Construct the message that was signed
+     * Must match the format in payment-client.ts
      */
     private constructPaymentMessage(proof: PaymentProof): string {
-        return `x402 Payment
-Amount: ${proof.amount}
+        return `Payment Authorization
+Amount: ${proof.amount} wei
 Recipient: ${proof.recipient}
+Network: sepolia
 Nonce: ${proof.nonce}
-Timestamp: ${proof.timestamp}`;
+Timestamp: ${proof.timestamp}
+
+By signing this message, you authorize the payment.`;
     }
 
     /**

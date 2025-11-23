@@ -1,14 +1,15 @@
+import dotenv from 'dotenv';
+
+// IMPORTANT: Load environment variables BEFORE importing other modules
+dotenv.config();
+
 import express, { Express } from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
 import { PaymentVerificationService } from './services/verification.js';
 import { SettlementService } from './services/settlement.js';
 import { PaymentStorageService } from './services/storage.js';
 import { createFacilitatorRoutes } from './routes/facilitator.js';
-
-// Load environment variables
-dotenv.config();
 
 const app: Express = express();
 const port = process.env.PORT || 3002;
