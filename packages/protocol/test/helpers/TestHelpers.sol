@@ -2,7 +2,9 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {SignatureRecover} from "@evvm/testnet-contracts/library/SignatureRecover.sol";
+import {
+    SignatureRecover
+} from "@evvm/testnet-contracts/library/SignatureRecover.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
@@ -24,18 +26,28 @@ contract TestBase is Test {
         string memory message,
         uint256 signerPrivateKey
     ) internal returns (bytes memory signature) {
-        // Create the message hash following EIP-191 format
-        // Format: evvmId + functionName + message
+        // sig format: evvmId + functionName + message
+
         string memory fullMessage = string.concat(
             Strings.toString(evvmId),
+            ",", 
             functionName,
+            ",",
             message
         );
-        
-        bytes32 messageHash = keccak256(abi.encodePacked(fullMessage));
-        
-        // Generate signature using the signer's private key
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, messageHash);
+
+        bytes32 messageHash = keccak256(
+            abi.encodePacked(
+                "\x19Ethereum Signed Message:\n",
+                Strings.toString(bytes(fullMessage).length),
+                fullMessage
+            )
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            signerPrivateKey,
+            messageHash
+        );
         signature = abi.encodePacked(r, s, v);
     }
 
@@ -55,13 +67,13 @@ contract TestBase is Test {
         bytes memory signature,
         address expectedSigner
     ) internal view returns (bool isValid) {
-        return SignatureRecover.signatureVerification(
-            Strings.toString(evvmId),
-            functionName,
-            message,
-            signature,
-            expectedSigner
-        );
+        return
+            SignatureRecover.signatureVerification(
+                Strings.toString(evvmId),
+                functionName,
+                message,
+                signature,
+                expectedSigner
+            );
     }
 }
-

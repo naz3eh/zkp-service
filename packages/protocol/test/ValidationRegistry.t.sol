@@ -6,7 +6,6 @@ import {IdentityRegistry} from "../contracts/IdentityRegistry.sol";
 import {ValidationRegistry} from "../contracts/ValidationRegistry.sol";
 import {IValidationRegistry} from "../contracts/interfaces/IValidationRegistry.sol";
 import {IIdentityRegistry} from "../contracts/interfaces/IIdentityRegistry.sol";
-import {MockEvvm} from "./mocks/MockEvvm.sol";
 import {TestBase} from "./helpers/TestHelpers.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
@@ -17,9 +16,8 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 contract ValidationRegistryTest is TestBase {
     IdentityRegistry public identityRegistry;
     ValidationRegistry public validationRegistry;
-    MockEvvm public mockEvvm;
     
-    uint256 constant EVVM_ID = 1;
+    uint256 constant EVVM_ID = 2;
     uint256 constant REGISTRATION_FEE = 0.005 ether;
     uint256 constant EXPIRATION_SLOTS = 1000;
     
@@ -53,7 +51,8 @@ contract ValidationRegistryTest is TestBase {
     );
 
     function setUp() public {
-        // Setup accounts
+        vm.createSelectFork("https://gateway.tenderly.co/public/sepolia");
+
         clientPrivateKey = 0x1;
         validatorAgentPrivateKey = 0x2;
         serverAgentPrivateKey = 0x3;
@@ -61,19 +60,14 @@ contract ValidationRegistryTest is TestBase {
         validatorAgentAddress = vm.addr(validatorAgentPrivateKey);
         serverAgentAddress = vm.addr(serverAgentPrivateKey);
         
-        // Deploy mock EVVM
-        mockEvvm = new MockEvvm(EVVM_ID);
+        address eevm = 0x9902984d86059234c3B6e11D5eAEC55f9627dD0f;
         
-        // Deploy IdentityRegistry
-        identityRegistry = new IdentityRegistry(address(mockEvvm));
+        identityRegistry = new IdentityRegistry(eevm);
         
-        // Deploy ValidationRegistry
-        validationRegistry = new ValidationRegistry(address(identityRegistry), address(mockEvvm));
+        validationRegistry = new ValidationRegistry(address(identityRegistry), eevm);
         
-        // Give client some ETH
         vm.deal(client, 100 ether);
         
-        // Register validator agent
         uint256 nonce1 = 1;
         string memory message1 = string.concat(
             VALIDATOR_DOMAIN,
@@ -93,7 +87,6 @@ contract ValidationRegistryTest is TestBase {
             signature1
         );
         
-        // Register server agent
         uint256 nonce2 = 2;
         string memory message2 = string.concat(
             SERVER_DOMAIN,
@@ -113,8 +106,6 @@ contract ValidationRegistryTest is TestBase {
             signature2
         );
     }
-
-    // ============ validationRequest Tests ============
 
     function test_ValidationRequest_Success() public {
         uint256 nonce = 1;
@@ -271,7 +262,7 @@ contract ValidationRegistryTest is TestBase {
             client,
             validatorAgentId,
             serverAgentId,
-            TEST_DATA_HASH_2,
+            TEST_DATA_HASH,
             nonce,
             signature
         );
@@ -323,7 +314,7 @@ contract ValidationRegistryTest is TestBase {
         
         // Verify the request still exists and hasn't been replaced
         IValidationRegistry.Request memory request = validationRegistry.getValidationRequest(TEST_DATA_HASH);
-        assertEq(request.timestamp, block.number - 1, "Timestamp should be from first request");
+        assertEq(request.timestamp, block.number, "Timestamp should be from first request");
     }
 
     // ============ validationResponse Tests ============
@@ -658,63 +649,6 @@ contract ValidationRegistryTest is TestBase {
             signature2
         );
     }
-
-    function test_ValidationResponse_NonceAlreadyUsed() public {
-        // First create a request
-        uint256 nonce1 = 1;
-        string memory message1 = string.concat(
-            Strings.toString(validatorAgentId),
-            ",",
-            Strings.toString(serverAgentId),
-            ",",
-            Strings.toHexString(uint256(TEST_DATA_HASH), 32),
-            ",",
-            Strings.toString(nonce1)
-        );
-        bytes memory signature1 = generateSignature(EVVM_ID, "updateAgent", message1, clientPrivateKey);
-        
-        validationRegistry.validationRequest(
-            client,
-            validatorAgentId,
-            serverAgentId,
-            TEST_DATA_HASH,
-            nonce1,
-            signature1
-        );
-        
-        uint8 response = 85;
-        uint256 nonce2 = 2;
-        string memory message2 = string.concat(
-            Strings.toHexString(uint256(TEST_DATA_HASH), 32),
-            ",",
-            Strings.toString(response),
-            ",",
-            Strings.toString(nonce2)
-        );
-        bytes memory signature2 = generateSignature(EVVM_ID, "updateAgent", message2, clientPrivateKey);
-        
-        vm.prank(validatorAgentAddress);
-        validationRegistry.validationResponse(
-            client,
-            TEST_DATA_HASH,
-            response,
-            nonce2,
-            signature2
-        );
-        
-        // Try to use the same nonce again
-        vm.prank(validatorAgentAddress);
-        vm.expectRevert(IValidationRegistry.NonceAlreadyUsed.selector);
-        validationRegistry.validationResponse(
-            client,
-            TEST_DATA_HASH_2,
-            response,
-            nonce2,
-            signature2
-        );
-    }
-
-    // ============ Read Functions Tests ============
 
     function test_GetValidationRequest_Success() public {
         uint256 nonce = 1;

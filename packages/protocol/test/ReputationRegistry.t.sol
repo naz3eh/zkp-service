@@ -6,20 +6,17 @@ import {IdentityRegistry} from "../contracts/IdentityRegistry.sol";
 import {ReputationRegistry} from "../contracts/ReputationRegistry.sol";
 import {IReputationRegistry} from "../contracts/interfaces/IReputationRegistry.sol";
 import {IIdentityRegistry} from "../contracts/interfaces/IIdentityRegistry.sol";
-import {MockEvvm} from "./mocks/MockEvvm.sol";
 import {TestBase} from "./helpers/TestHelpers.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @title ReputationRegistryTest
- * @dev Comprehensive test suite for ReputationRegistry contract
  */
 contract ReputationRegistryTest is TestBase {
     IdentityRegistry public identityRegistry;
     ReputationRegistry public reputationRegistry;
-    MockEvvm public mockEvvm;
     
-    uint256 constant EVVM_ID = 1;
+    uint256 constant EVVM_ID = 2;
     uint256 constant REGISTRATION_FEE = 0.005 ether;
     
     address public client;
@@ -42,7 +39,8 @@ contract ReputationRegistryTest is TestBase {
     );
 
     function setUp() public {
-        // Setup accounts
+        vm.createSelectFork("https://gateway.tenderly.co/public/sepolia");
+
         clientPrivateKey = 0x1;
         clientAgentPrivateKey = 0x2;
         serverAgentPrivateKey = 0x3;
@@ -50,19 +48,14 @@ contract ReputationRegistryTest is TestBase {
         clientAgentAddress = vm.addr(clientAgentPrivateKey);
         serverAgentAddress = vm.addr(serverAgentPrivateKey);
         
-        // Deploy mock EVVM
-        mockEvvm = new MockEvvm(EVVM_ID);
+        address eevm = 0x9902984d86059234c3B6e11D5eAEC55f9627dD0f;
+
+        identityRegistry = new IdentityRegistry(eevm);
         
-        // Deploy IdentityRegistry
-        identityRegistry = new IdentityRegistry(address(mockEvvm));
+        reputationRegistry = new ReputationRegistry(address(identityRegistry), eevm);
         
-        // Deploy ReputationRegistry
-        reputationRegistry = new ReputationRegistry(address(identityRegistry), address(mockEvvm));
-        
-        // Give client some ETH
         vm.deal(client, 100 ether);
         
-        // Register client agent
         uint256 nonce1 = 1;
         string memory message1 = string.concat(
             CLIENT_DOMAIN,
@@ -82,7 +75,6 @@ contract ReputationRegistryTest is TestBase {
             signature1
         );
         
-        // Register server agent
         uint256 nonce2 = 2;
         string memory message2 = string.concat(
             SERVER_DOMAIN,

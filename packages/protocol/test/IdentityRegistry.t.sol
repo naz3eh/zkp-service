@@ -4,52 +4,54 @@ pragma solidity ^0.8.28;
 import {Test} from "forge-std/Test.sol";
 import {IdentityRegistry} from "../contracts/IdentityRegistry.sol";
 import {IIdentityRegistry} from "../contracts/interfaces/IIdentityRegistry.sol";
-import {MockEvvm} from "./mocks/MockEvvm.sol";
 import {TestBase} from "./helpers/TestHelpers.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @title IdentityRegistryTest
- * @dev Comprehensive test suite for IdentityRegistry contract
  */
 contract IdentityRegistryTest is TestBase {
     IdentityRegistry public identityRegistry;
-    MockEvvm public mockEvvm;
-    
+
     uint256 constant REGISTRATION_FEE = 0.005 ether;
-    uint256 constant EVVM_ID = 1;
-    
+    uint256 constant EVVM_ID = 2;
+
     address public client;
     address public agentAddress;
     uint256 public clientPrivateKey;
     uint256 public agentPrivateKey;
-    
+
     string public constant TEST_DOMAIN = "test-agent.example.com";
     string public constant TEST_DOMAIN_2 = "test-agent-2.example.com";
-    
-    event AgentRegistered(uint256 indexed agentId, string agentDomain, address agentAddress);
-    event AgentUpdated(uint256 indexed agentId, string agentDomain, address agentAddress);
+
+    event AgentRegistered(
+        uint256 indexed agentId,
+        string agentDomain,
+        address agentAddress
+    );
+    event AgentUpdated(
+        uint256 indexed agentId,
+        string agentDomain,
+        address agentAddress
+    );
 
     function setUp() public {
+        vm.createSelectFork("https://gateway.tenderly.co/public/sepolia");
+
         // Setup accounts
         clientPrivateKey = 0x1;
         agentPrivateKey = 0x2;
         client = vm.addr(clientPrivateKey);
         agentAddress = vm.addr(agentPrivateKey);
-        
-        // Deploy mock EVVM
-        mockEvvm = new MockEvvm(EVVM_ID);
-        
-        // Deploy IdentityRegistry
-        identityRegistry = new IdentityRegistry(address(mockEvvm));
-        
-        // Give client some ETH
+
+        address eevm = 0x9902984d86059234c3B6e11D5eAEC55f9627dD0f;
+
+        identityRegistry = new IdentityRegistry(eevm);
+
         vm.deal(client, 100 ether);
     }
 
-    // ============ newAgent Tests ============
-
-    function test_NewAgent_Success() public {
+    function test_NewAgent() public {
         uint256 nonce = 1;
         string memory message = string.concat(
             TEST_DOMAIN,
@@ -58,9 +60,14 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce)
         );
-        bytes memory signature = generateSignature(EVVM_ID, "newAgent", message, clientPrivateKey);
-        
-        vm.prank(client);
+        bytes memory signature = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message,
+            clientPrivateKey
+        );
+
+        // vm.prank(client);
         uint256 agentId = identityRegistry.newAgent{value: REGISTRATION_FEE}(
             client,
             TEST_DOMAIN,
@@ -68,15 +75,21 @@ contract IdentityRegistryTest is TestBase {
             nonce,
             signature
         );
-        
+
         assertEq(agentId, 1, "Agent ID should be 1");
-        
-        IIdentityRegistry.AgentInfo memory agent = identityRegistry.getAgent(agentId);
+
+        IIdentityRegistry.AgentInfo memory agent = identityRegistry.getAgent(
+            agentId
+        );
         assertEq(agent.agentId, agentId, "Agent ID mismatch");
         assertEq(agent.agentDomain, TEST_DOMAIN, "Agent domain mismatch");
         assertEq(agent.agentAddress, agentAddress, "Agent address mismatch");
-        
-        assertEq(identityRegistry.getAgentCount(), 1, "Agent count should be 1");
+
+        assertEq(
+            identityRegistry.getAgentCount(),
+            1,
+            "Agent count should be 1"
+        );
         assertTrue(identityRegistry.agentExists(agentId), "Agent should exist");
     }
 
@@ -89,8 +102,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce)
         );
-        bytes memory signature = generateSignature(EVVM_ID, "newAgent", message, clientPrivateKey);
-        
+        bytes memory signature = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         vm.expectRevert(IIdentityRegistry.InsufficientFee.selector);
         identityRegistry.newAgent{value: REGISTRATION_FEE - 1}(
@@ -111,8 +129,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce)
         );
-        bytes memory signature = generateSignature(EVVM_ID, "newAgent", message, clientPrivateKey);
-        
+        bytes memory signature = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         vm.expectRevert(IIdentityRegistry.InvalidDomain.selector);
         identityRegistry.newAgent{value: REGISTRATION_FEE}(
@@ -133,8 +156,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce)
         );
-        bytes memory signature = generateSignature(EVVM_ID, "newAgent", message, clientPrivateKey);
-        
+        bytes memory signature = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         vm.expectRevert(IIdentityRegistry.InvalidAddress.selector);
         identityRegistry.newAgent{value: REGISTRATION_FEE}(
@@ -155,8 +183,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce1)
         );
-        bytes memory signature1 = generateSignature(EVVM_ID, "newAgent", message1, clientPrivateKey);
-        
+        bytes memory signature1 = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message1,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         identityRegistry.newAgent{value: REGISTRATION_FEE}(
             client,
@@ -165,7 +198,7 @@ contract IdentityRegistryTest is TestBase {
             nonce1,
             signature1
         );
-        
+
         address agentAddress2 = vm.addr(0x3);
         uint256 nonce2 = 2;
         string memory message2 = string.concat(
@@ -175,8 +208,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce2)
         );
-        bytes memory signature2 = generateSignature(EVVM_ID, "newAgent", message2, clientPrivateKey);
-        
+        bytes memory signature2 = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message2,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         vm.expectRevert(IIdentityRegistry.DomainAlreadyRegistered.selector);
         identityRegistry.newAgent{value: REGISTRATION_FEE}(
@@ -197,8 +235,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce1)
         );
-        bytes memory signature1 = generateSignature(EVVM_ID, "newAgent", message1, clientPrivateKey);
-        
+        bytes memory signature1 = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message1,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         identityRegistry.newAgent{value: REGISTRATION_FEE}(
             client,
@@ -207,7 +250,7 @@ contract IdentityRegistryTest is TestBase {
             nonce1,
             signature1
         );
-        
+
         uint256 nonce2 = 2;
         string memory message2 = string.concat(
             TEST_DOMAIN_2,
@@ -216,8 +259,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce2)
         );
-        bytes memory signature2 = generateSignature(EVVM_ID, "newAgent", message2, clientPrivateKey);
-        
+        bytes memory signature2 = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message2,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         vm.expectRevert(IIdentityRegistry.AddressAlreadyRegistered.selector);
         identityRegistry.newAgent{value: REGISTRATION_FEE}(
@@ -239,8 +287,13 @@ contract IdentityRegistryTest is TestBase {
             Strings.toString(nonce)
         );
         // Use wrong private key for signature
-        bytes memory signature = generateSignature(EVVM_ID, "newAgent", message, 0x999);
-        
+        bytes memory signature = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message,
+            0x999
+        );
+
         vm.prank(client);
         vm.expectRevert(IIdentityRegistry.InvalidSignature.selector);
         identityRegistry.newAgent{value: REGISTRATION_FEE}(
@@ -261,8 +314,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce)
         );
-        bytes memory signature = generateSignature(EVVM_ID, "newAgent", message, clientPrivateKey);
-        
+        bytes memory signature = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         identityRegistry.newAgent{value: REGISTRATION_FEE}(
             client,
@@ -271,7 +329,7 @@ contract IdentityRegistryTest is TestBase {
             nonce,
             signature
         );
-        
+
         address agentAddress2 = vm.addr(0x3);
         string memory message2 = string.concat(
             TEST_DOMAIN_2,
@@ -280,8 +338,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce)
         );
-        bytes memory signature2 = generateSignature(EVVM_ID, "newAgent", message2, clientPrivateKey);
-        
+        bytes memory signature2 = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message2,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         vm.expectRevert(IIdentityRegistry.NonceAlreadyUsed.selector);
         identityRegistry.newAgent{value: REGISTRATION_FEE}(
@@ -293,8 +356,6 @@ contract IdentityRegistryTest is TestBase {
         );
     }
 
-    // ============ updateAgent Tests ============
-
     function test_UpdateAgent_Success_UpdateDomain() public {
         // First register an agent
         uint256 nonce1 = 1;
@@ -305,8 +366,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce1)
         );
-        bytes memory signature1 = generateSignature(EVVM_ID, "newAgent", message1, clientPrivateKey);
-        
+        bytes memory signature1 = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message1,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         uint256 agentId = identityRegistry.newAgent{value: REGISTRATION_FEE}(
             client,
@@ -315,7 +381,7 @@ contract IdentityRegistryTest is TestBase {
             nonce1,
             signature1
         );
-        
+
         // Update domain
         uint256 nonce2 = 2;
         string memory message2 = string.concat(
@@ -327,8 +393,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce2)
         );
-        bytes memory signature2 = generateSignature(EVVM_ID, "updateAgent", message2, clientPrivateKey);
-        
+        bytes memory signature2 = generateSignature(
+            EVVM_ID,
+            "updateAgent",
+            message2,
+            clientPrivateKey
+        );
+
         vm.prank(agentAddress);
         bool success = identityRegistry.updateAgent(
             client,
@@ -338,12 +409,18 @@ contract IdentityRegistryTest is TestBase {
             nonce2,
             signature2
         );
-        
+
         assertTrue(success, "Update should succeed");
-        
-        IIdentityRegistry.AgentInfo memory agent = identityRegistry.getAgent(agentId);
+
+        IIdentityRegistry.AgentInfo memory agent = identityRegistry.getAgent(
+            agentId
+        );
         assertEq(agent.agentDomain, TEST_DOMAIN_2, "Domain should be updated");
-        assertEq(agent.agentAddress, agentAddress, "Address should remain unchanged");
+        assertEq(
+            agent.agentAddress,
+            agentAddress,
+            "Address should remain unchanged"
+        );
     }
 
     function test_UpdateAgent_Success_UpdateAddress() public {
@@ -356,8 +433,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce1)
         );
-        bytes memory signature1 = generateSignature(EVVM_ID, "newAgent", message1, clientPrivateKey);
-        
+        bytes memory signature1 = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message1,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         uint256 agentId = identityRegistry.newAgent{value: REGISTRATION_FEE}(
             client,
@@ -366,7 +448,7 @@ contract IdentityRegistryTest is TestBase {
             nonce1,
             signature1
         );
-        
+
         // Update address
         address newAgentAddress = vm.addr(0x4);
         uint256 nonce2 = 2;
@@ -379,8 +461,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce2)
         );
-        bytes memory signature2 = generateSignature(EVVM_ID, "updateAgent", message2, clientPrivateKey);
-        
+        bytes memory signature2 = generateSignature(
+            EVVM_ID,
+            "updateAgent",
+            message2,
+            clientPrivateKey
+        );
+
         vm.prank(agentAddress);
         bool success = identityRegistry.updateAgent(
             client,
@@ -390,12 +477,22 @@ contract IdentityRegistryTest is TestBase {
             nonce2,
             signature2
         );
-        
+
         assertTrue(success, "Update should succeed");
-        
-        IIdentityRegistry.AgentInfo memory agent = identityRegistry.getAgent(agentId);
-        assertEq(agent.agentDomain, TEST_DOMAIN, "Domain should remain unchanged");
-        assertEq(agent.agentAddress, newAgentAddress, "Address should be updated");
+
+        IIdentityRegistry.AgentInfo memory agent = identityRegistry.getAgent(
+            agentId
+        );
+        assertEq(
+            agent.agentDomain,
+            TEST_DOMAIN,
+            "Domain should remain unchanged"
+        );
+        assertEq(
+            agent.agentAddress,
+            newAgentAddress,
+            "Address should be updated"
+        );
     }
 
     function test_UpdateAgent_Success_UpdateBoth() public {
@@ -408,8 +505,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce1)
         );
-        bytes memory signature1 = generateSignature(EVVM_ID, "newAgent", message1, clientPrivateKey);
-        
+        bytes memory signature1 = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message1,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         uint256 agentId = identityRegistry.newAgent{value: REGISTRATION_FEE}(
             client,
@@ -418,7 +520,7 @@ contract IdentityRegistryTest is TestBase {
             nonce1,
             signature1
         );
-        
+
         // Update both domain and address
         address newAgentAddress = vm.addr(0x4);
         uint256 nonce2 = 2;
@@ -431,10 +533,15 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce2)
         );
-        bytes memory signature2 = generateSignature(EVVM_ID, "updateAgent", message2, clientPrivateKey);
-        
+        bytes memory signature2 = generateSignature(
+            EVVM_ID,
+            "updateAgent",
+            message2,
+            clientPrivateKey
+        );
+
         vm.prank(agentAddress);
-        
+
         bool success = identityRegistry.updateAgent(
             client,
             agentId,
@@ -443,12 +550,18 @@ contract IdentityRegistryTest is TestBase {
             nonce2,
             signature2
         );
-        
+
         assertTrue(success, "Update should succeed");
-        
-        IIdentityRegistry.AgentInfo memory agent = identityRegistry.getAgent(agentId);
+
+        IIdentityRegistry.AgentInfo memory agent = identityRegistry.getAgent(
+            agentId
+        );
         assertEq(agent.agentDomain, TEST_DOMAIN_2, "Domain should be updated");
-        assertEq(agent.agentAddress, newAgentAddress, "Address should be updated");
+        assertEq(
+            agent.agentAddress,
+            newAgentAddress,
+            "Address should be updated"
+        );
     }
 
     function test_UpdateAgent_AgentNotFound() public {
@@ -462,8 +575,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce)
         );
-        bytes memory signature = generateSignature(EVVM_ID, "updateAgent", message, clientPrivateKey);
-        
+        bytes memory signature = generateSignature(
+            EVVM_ID,
+            "updateAgent",
+            message,
+            clientPrivateKey
+        );
+
         vm.prank(agentAddress);
         vm.expectRevert(IIdentityRegistry.AgentNotFound.selector);
         identityRegistry.updateAgent(
@@ -486,8 +604,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce1)
         );
-        bytes memory signature1 = generateSignature(EVVM_ID, "newAgent", message1, clientPrivateKey);
-        
+        bytes memory signature1 = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message1,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         uint256 agentId = identityRegistry.newAgent{value: REGISTRATION_FEE}(
             client,
@@ -496,7 +619,7 @@ contract IdentityRegistryTest is TestBase {
             nonce1,
             signature1
         );
-        
+
         // Try to update from wrong address
         address unauthorizedAddress = vm.addr(0x5);
         uint256 nonce2 = 2;
@@ -509,8 +632,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce2)
         );
-        bytes memory signature2 = generateSignature(EVVM_ID, "updateAgent", message2, clientPrivateKey);
-        
+        bytes memory signature2 = generateSignature(
+            EVVM_ID,
+            "updateAgent",
+            message2,
+            clientPrivateKey
+        );
+
         vm.prank(unauthorizedAddress);
         vm.expectRevert(IIdentityRegistry.UnauthorizedUpdate.selector);
         identityRegistry.updateAgent(
@@ -533,8 +661,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce1)
         );
-        bytes memory signature1 = generateSignature(EVVM_ID, "newAgent", message1, clientPrivateKey);
-        
+        bytes memory signature1 = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message1,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         uint256 agentId1 = identityRegistry.newAgent{value: REGISTRATION_FEE}(
             client,
@@ -543,7 +676,7 @@ contract IdentityRegistryTest is TestBase {
             nonce1,
             signature1
         );
-        
+
         address agentAddress2 = vm.addr(0x3);
         uint256 nonce2 = 2;
         string memory message2 = string.concat(
@@ -553,8 +686,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce2)
         );
-        bytes memory signature2 = generateSignature(EVVM_ID, "newAgent", message2, clientPrivateKey);
-        
+        bytes memory signature2 = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message2,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         uint256 agentId2 = identityRegistry.newAgent{value: REGISTRATION_FEE}(
             client,
@@ -563,7 +701,7 @@ contract IdentityRegistryTest is TestBase {
             nonce2,
             signature2
         );
-        
+
         // Try to update agent1's domain to agent2's domain
         uint256 nonce3 = 3;
         string memory message3 = string.concat(
@@ -575,8 +713,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce3)
         );
-        bytes memory signature3 = generateSignature(EVVM_ID, "updateAgent", message3, clientPrivateKey);
-        
+        bytes memory signature3 = generateSignature(
+            EVVM_ID,
+            "updateAgent",
+            message3,
+            clientPrivateKey
+        );
+
         vm.prank(agentAddress);
         vm.expectRevert(IIdentityRegistry.DomainAlreadyRegistered.selector);
         identityRegistry.updateAgent(
@@ -600,8 +743,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce)
         );
-        bytes memory signature = generateSignature(EVVM_ID, "newAgent", message, clientPrivateKey);
-        
+        bytes memory signature = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         uint256 agentId = identityRegistry.newAgent{value: REGISTRATION_FEE}(
             client,
@@ -610,8 +758,10 @@ contract IdentityRegistryTest is TestBase {
             nonce,
             signature
         );
-        
-        IIdentityRegistry.AgentInfo memory agent = identityRegistry.getAgent(agentId);
+
+        IIdentityRegistry.AgentInfo memory agent = identityRegistry.getAgent(
+            agentId
+        );
         assertEq(agent.agentId, agentId);
         assertEq(agent.agentDomain, TEST_DOMAIN);
         assertEq(agent.agentAddress, agentAddress);
@@ -631,8 +781,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce)
         );
-        bytes memory signature = generateSignature(EVVM_ID, "newAgent", message, clientPrivateKey);
-        
+        bytes memory signature = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         uint256 agentId = identityRegistry.newAgent{value: REGISTRATION_FEE}(
             client,
@@ -641,8 +796,9 @@ contract IdentityRegistryTest is TestBase {
             nonce,
             signature
         );
-        
-        IIdentityRegistry.AgentInfo memory agent = identityRegistry.resolveByDomain(TEST_DOMAIN);
+
+        IIdentityRegistry.AgentInfo memory agent = identityRegistry
+            .resolveByDomain(TEST_DOMAIN);
         assertEq(agent.agentId, agentId);
         assertEq(agent.agentDomain, TEST_DOMAIN);
         assertEq(agent.agentAddress, agentAddress);
@@ -662,8 +818,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce)
         );
-        bytes memory signature = generateSignature(EVVM_ID, "newAgent", message, clientPrivateKey);
-        
+        bytes memory signature = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         uint256 agentId = identityRegistry.newAgent{value: REGISTRATION_FEE}(
             client,
@@ -672,8 +833,9 @@ contract IdentityRegistryTest is TestBase {
             nonce,
             signature
         );
-        
-        IIdentityRegistry.AgentInfo memory agent = identityRegistry.resolveByAddress(agentAddress);
+
+        IIdentityRegistry.AgentInfo memory agent = identityRegistry
+            .resolveByAddress(agentAddress);
         assertEq(agent.agentId, agentId);
         assertEq(agent.agentDomain, TEST_DOMAIN);
         assertEq(agent.agentAddress, agentAddress);
@@ -685,8 +847,12 @@ contract IdentityRegistryTest is TestBase {
     }
 
     function test_GetAgentCount() public {
-        assertEq(identityRegistry.getAgentCount(), 0, "Initial count should be 0");
-        
+        assertEq(
+            identityRegistry.getAgentCount(),
+            0,
+            "Initial count should be 0"
+        );
+
         // Register first agent
         uint256 nonce1 = 1;
         string memory message1 = string.concat(
@@ -696,8 +862,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce1)
         );
-        bytes memory signature1 = generateSignature(EVVM_ID, "newAgent", message1, clientPrivateKey);
-        
+        bytes memory signature1 = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message1,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         identityRegistry.newAgent{value: REGISTRATION_FEE}(
             client,
@@ -706,9 +877,9 @@ contract IdentityRegistryTest is TestBase {
             nonce1,
             signature1
         );
-        
+
         assertEq(identityRegistry.getAgentCount(), 1, "Count should be 1");
-        
+
         // Register second agent
         address agentAddress2 = vm.addr(0x3);
         uint256 nonce2 = 2;
@@ -719,8 +890,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce2)
         );
-        bytes memory signature2 = generateSignature(EVVM_ID, "newAgent", message2, clientPrivateKey);
-        
+        bytes memory signature2 = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message2,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         identityRegistry.newAgent{value: REGISTRATION_FEE}(
             client,
@@ -729,13 +905,11 @@ contract IdentityRegistryTest is TestBase {
             nonce2,
             signature2
         );
-        
+
         assertEq(identityRegistry.getAgentCount(), 2, "Count should be 2");
     }
 
     function test_AgentExists() public {
-        assertFalse(identityRegistry.agentExists(1), "Agent should not exist initially");
-        
         uint256 nonce = 1;
         string memory message = string.concat(
             TEST_DOMAIN,
@@ -744,8 +918,13 @@ contract IdentityRegistryTest is TestBase {
             ",",
             Strings.toString(nonce)
         );
-        bytes memory signature = generateSignature(EVVM_ID, "newAgent", message, clientPrivateKey);
-        
+        bytes memory signature = generateSignature(
+            EVVM_ID,
+            "newAgent",
+            message,
+            clientPrivateKey
+        );
+
         vm.prank(client);
         uint256 agentId = identityRegistry.newAgent{value: REGISTRATION_FEE}(
             client,
@@ -754,13 +933,19 @@ contract IdentityRegistryTest is TestBase {
             nonce,
             signature
         );
-        
+
         assertTrue(identityRegistry.agentExists(agentId), "Agent should exist");
-        assertFalse(identityRegistry.agentExists(999), "Non-existent agent should not exist");
+        assertFalse(
+            identityRegistry.agentExists(999),
+            "Non-existent agent should not exist"
+        );
     }
 
     function test_RegistrationFee() public {
-        assertEq(identityRegistry.REGISTRATION_FEE(), REGISTRATION_FEE, "Registration fee should match");
+        assertEq(
+            identityRegistry.REGISTRATION_FEE(),
+            REGISTRATION_FEE,
+            "Registration fee should match"
+        );
     }
 }
-

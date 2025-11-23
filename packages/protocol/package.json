@@ -9,6 +9,8 @@
   },
   "dependencies": {
     "@evvm/testnet-contracts": "^2.1.3",
+    "@nomicfoundation/hardhat-ethers": "^4.0.3",
+    "@nomicfoundation/hardhat-ignition-viem": "^3.0.5",
     "@openzeppelin/contracts": "^5.0.0",
     "forge-std": "github:foundry-rs/forge-std"
   }
