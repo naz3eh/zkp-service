@@ -16,3 +16,6 @@ rand = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
 reqwest = { version = "0.12.24", features = ["multipart", "json"] }
 num_cpus = "1.0"
+axum = { version = "0.7", features = ["json"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors"] }

@@ -29,12 +29,6 @@ pub enum ZkpError {
 
     #[error("Git clone failed: {0}")]
     GitCloneError(String),
-    
-    #[error("Filecoin upload failed: {0}")]
-    FilecoinUploadError(String),
-    
-    #[error("HTTP request failed: {0}")]
-    HttpError(String),
 }
 
 pub type ZkpResult<T> = Result<T, ZkpError>;
