@@ -1,7 +1,6 @@
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-#[allow(dead_code)]
 pub enum ZkpError {
     #[error("Noir command execution failed: {0}")]
     NoirCommandError(String),

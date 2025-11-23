@@ -53,3 +53,86 @@ pub struct ZkpService {
     pub mock_mode: bool,
     pub tracked_directories: Arc<Mutex<HashMap<String, String>>>,
 }
+
+// API Request/Response types
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PublicKeyResponse {
+    pub public_key: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WriteStateRequest {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct QueryStateResponse {
+    pub value: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ConsultXRequest {
+    pub query: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ConsultXResponse {
+    pub result: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SubmitXRequest {
+    pub data: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SubmitXResponse {
+    pub submission_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DecryptInputRequest {
+    pub encrypted_data: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DecryptInputResponse {
+    pub decrypted: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GitCloneRequest {
+    pub gitrepo: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GitCloneResponse {
+    pub uuid: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DeleteDirectoryRequest {
+    pub dir_path: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TrackedDirectoriesResponse {
+    pub directories: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SignMessageRequest {
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SignMessageResponse {
+    pub signature: String,
+    pub public_key: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ErrorResponse {
+    pub error: String,
+}

@@ -9,89 +9,22 @@ use axum::{
     routing::{delete, get, post},
     Router,
 };
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 
 use service::ZkpService;
-use types::{ProofRequest, ProofResponse};
+use types::{
+    ConsultXRequest, ConsultXResponse, DecryptInputRequest, DecryptInputResponse,
+    DeleteDirectoryRequest, ErrorResponse, GitCloneRequest, GitCloneResponse,
+    PublicKeyResponse, ProofRequest, ProofResponse, QueryStateResponse,
+    SignMessageRequest, SignMessageResponse, SubmitXRequest, SubmitXResponse,
+    TrackedDirectoriesResponse, WriteStateRequest,
+};
 
 // Shared application state
 #[derive(Clone)]
 struct AppState {
     service: Arc<ZkpService>,
-}
-
-// Request/Response types for API
-#[derive(Debug, Serialize, Deserialize)]
-struct PublicKeyResponse {
-    public_key: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct WriteStateRequest {
-    key: String,
-    value: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct QueryStateResponse {
-    value: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ConsultXRequest {
-    query: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ConsultXResponse {
-    result: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct SubmitXRequest {
-    data: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct SubmitXResponse {
-    submission_id: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct DecryptInputRequest {
-    encrypted_data: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct DecryptInputResponse {
-    decrypted: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct GitCloneRequest {
-    gitrepo: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct GitCloneResponse {
-    uuid: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct DeleteDirectoryRequest {
-    dir_path: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct TrackedDirectoriesResponse {
-    directories: Vec<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ErrorResponse {
-    error: String,
 }
 
 // API Handlers
@@ -198,6 +131,17 @@ async fn list_tracked_directories(
     Ok(Json(TrackedDirectoriesResponse { directories }))
 }
 
+async fn sign_message(
+    State(state): State<AppState>,
+    Json(request): Json<SignMessageRequest>,
+) -> Result<Json<SignMessageResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let signature = state.service.sign_message(&request.message)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: e.to_string() })))?;
+    let public_key = state.service.get_public_key()
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: e.to_string() })))?;
+    Ok(Json(SignMessageResponse { signature, public_key }))
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mock_mode = std::env::var("MOCK_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
@@ -212,6 +156,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let app = Router::new()
         .route("/public-key", get(get_public_key))
+        .route("/sign-message", post(sign_message))
         .route("/execute-zkp", post(execute_zkp))
         .route("/retrieve-output/:task_id", get(retrieve_output))
         .route("/write-state", post(write_state))
@@ -230,6 +175,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Server listening on http://0.0.0.0:3000");
     println!("API Endpoints:");
     println!("   GET  /public-key");
+    println!("   POST /sign-message");
     println!("   POST /execute-zkp");
     println!("   GET  /retrieve-output/:task_id");
     println!("   POST /write-state");

@@ -3,7 +3,8 @@ pub use crate::types::ZkpService;
 use crate::errors::{ZkpError, ZkpResult};
 use crate::types::{ProofRequest, ProofResponse, ProofStatus, ProofTask, QueuedProofTask};
 use rand::RngCore;
-use secp256k1::{Secp256k1, SecretKey as SecpSecretKey};
+use secp256k1::{Message, Secp256k1, SecretKey as SecpSecretKey};
+use sha3::{Digest, Keccak256};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::process::Command;
@@ -95,6 +96,54 @@ impl ZkpService {
         let public_key = secp256k1::PublicKey::from_secret_key(&self.secp, &self.secret_key);
         let serialized = public_key.serialize_uncompressed();
         Ok(format!("0x{}", hex::encode(&serialized)))
+    }
+
+    /// Sign a message using Ethereum-compatible EIP-191 personal sign format
+    /// Returns signature in format: 0x + r (32 bytes) + s (32 bytes) + v (1 byte) = 65 bytes total
+    pub fn sign_message(&self, message: &str) -> ZkpResult<String> {
+        // Ethereum personal sign format: "\x19Ethereum Signed Message:\n" + length + message
+        let prefix = "\x19Ethereum Signed Message:\n";
+        let message_bytes = message.as_bytes();
+        let length = message_bytes.len();
+        
+        // Create the prefixed message
+        let mut prefixed_message = Vec::with_capacity(prefix.len() + 8 + message_bytes.len());
+        prefixed_message.extend_from_slice(prefix.as_bytes());
+        prefixed_message.extend_from_slice(length.to_string().as_bytes());
+        prefixed_message.extend_from_slice(message_bytes);
+        
+        // Hash with Keccak256
+        let mut hasher = Keccak256::new();
+        hasher.update(&prefixed_message);
+        let hash = hasher.finalize();
+        
+        // Convert to secp256k1 Message (must be exactly 32 bytes)
+        let message_hash = Message::from_digest_slice(&hash)
+            .map_err(|e| ZkpError::StateError(format!("Failed to create message hash: {}", e)))?;
+        
+        // Sign the message with recovery
+        let signature = self.secp.sign_ecdsa_recoverable(&message_hash, &self.secret_key);
+        
+        // Get recovery ID
+        let recovery_id = signature.serialize_compact().0;
+        
+        // Serialize signature to compact format (64 bytes: r + s)
+        let sig_compact = signature.serialize_compact().1;
+        
+        // Extract r and s (32 bytes each)
+        let r = &sig_compact[0..32];
+        let s = &sig_compact[32..64];
+        
+        // Calculate v (recovery ID + 27 for Ethereum)
+        let v = recovery_id.to_i32() as u8 + 27;
+        
+        // Combine r + s + v
+        let mut signature_bytes = Vec::with_capacity(65);
+        signature_bytes.extend_from_slice(r);
+        signature_bytes.extend_from_slice(s);
+        signature_bytes.push(v);
+        
+        Ok(format!("0x{}", hex::encode(&signature_bytes)))
     }
 
     pub async fn execute_zkp(&self, request: ProofRequest) -> ZkpResult<ProofResponse> {
